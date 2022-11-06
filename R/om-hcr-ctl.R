@@ -95,13 +95,18 @@ tmb_data <- list(
   ages = ages,
   recmult = sim$dat$recmult,
   obj_ctl = 0, # 0 = MAY, 1 = utility
-  xinc = 0.1, 
-  hcr = 0 # 0 = linear, 1 = logistic
+  hcr = 1 # 0 = U(t), 1 = linear hcr, 2 = logistic hcr
 )
 
-tmb_pars <- list(par = par)
-tmb_pars <- list(par = c(0.5, 0.5))
-
+if(tmb_data$hcr == 0){
+  tmb_pars <- list(par = rep(0.5, length(years)))
+}
+if(tmb_data$hcr == 1){
+  tmb_pars <- list(par = c(0.5, 0.5))
+}
+if(tmb_data$hcr == 2){
+  tmb_pars <- ???
+}
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
@@ -111,8 +116,20 @@ obj <- MakeADFun(tmb_data, tmb_pars,  silent = F, DLL = "om_hcr")
 obj$fn()
 obj$gr()
 
+if(tmb_data$hcr == 0){
+  lower = rep(0, length(years))
+  upper = rep(1, length(years))
+} 
+if(tmb_data$hcr == 1){
+  lower = rep(-Inf, length(tmb_pars$par))
+  upper = rep(Inf, length(tmb_pars$par))
+}
+
 # run om simulation
-opt <- nlminb(obj$par, obj$fn, obj$gr)
+opt <- nlminb(obj$par, obj$fn, obj$gr, 
+              lower = lower,
+              upper = upper
+)
 opt$par 
 SD = sdreport( obj ) # standard errors
 

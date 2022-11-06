@@ -42,7 +42,6 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages); 
   DATA_VECTOR(recmult);  // recruitment sequence
   DATA_INTEGER(obj_ctl); // 0 = MAY, 1 = HARA utility
-  DATA_SCALAR(xinc);     // increment for interpolation
   DATA_INTEGER(hcr);     // which harvest control rule 0 = linear; 1 = misery 
   
   vector<Type> n(n_age);

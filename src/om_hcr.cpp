@@ -96,8 +96,9 @@ Type objective_function<Type>::operator()()
     vulb(t) = (vul*n*wt).sum();                                    // sumproduct(vul*n*w) across a
     ssb(t) = (mwt*n).sum();                                        // sumproduct(mwt * n)
     abar(t) = (ages*n).sum() / sum(n);                             // sumproduct(ages*n) / sum(n)
-    if(hcr == 0){ut(t) = ut_linear(par, vulb(t));}                 // linear
-    if(hcr == 1){ut(t) = ut_map(par, vulb(t), xinc);}              // moxnes interpolation
+    if(hcr == 0){ut(t) = par(t);}
+    if(hcr == 1){ut(t) = ut_linear(par, vulb(t));}                 // linear hcr
+    //if(hcr == 1){ut(t) = ut_map(par, vulb(t), xinc);}              
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 

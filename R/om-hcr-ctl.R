@@ -120,7 +120,7 @@ if(tmb_data$hcr == 0){
   lower = rep(0, length(years))
   upper = rep(1, length(years))
 } 
-if(tmb_data$hcr == 1){
+if(tmb_data$hcr > 0){
   lower = rep(-Inf, length(tmb_pars$par))
   upper = rep(Inf, length(tmb_pars$par))
 }

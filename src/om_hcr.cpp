@@ -18,9 +18,7 @@ template <class Type>
 Type ut_logistic(vector<Type> par, Type vulb)
 { 
   // Umax = par(0); bslope = par(1); bhalf = par(3); 
-  // from Carl's spreadsheet:
-  // =Umax/(1+EXP(-bslope*(E5-bhalf)))
-  Type out = par(0) / (1 + exp(-par(1)*(vulb - par(3)))); 
+  Type out = par(0) / (1 + exp(-par(1)*(vulb - par(2)))); 
   return out;
 }  
 

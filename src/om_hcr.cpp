@@ -3,16 +3,6 @@
  * omniscient manager for highly variable recruitment
  *             cahill & walters oct 2022
  */
-template <class Type> 
-Type ut_logistic(vector<Type> par, Type vulb, Type xinc)
-{ 
-  int ix = CppAD::Integer(vulb / xinc);
-  if(ix > par.size() - 2){ ix = par.size() - 2; }
-  Type y1 = par(ix);
-  Type y2 = par(ix + 1);
-  Type out = y1 + (vulb/xinc - (ix))* (y2 - y1);
-  return out;
-}  
 
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
@@ -24,25 +14,35 @@ Type ut_linear(vector<Type> par, Type vulb)
   return out;
 }  
 
+template <class Type> 
+Type ut_logistic(vector<Type> par, Type vulb)
+{ 
+  // Umax = par(0); bslope = par(1); bhalf = par(3); 
+  Type offset = 1e-6; 
+  Type TAC = offset + par(0) / (1 + exp(-par(1)*(vulb - par(3)))); 
+  Type out = TAC/(vulb + offset);
+  return out;
+}  
+
 template <class Type>
 Type objective_function<Type>::operator()()
 {
   DATA_INTEGER(n_year); 
   DATA_INTEGER(n_age);
-  DATA_SCALAR(vbk);      // von bertalanffy k 
-  DATA_SCALAR(s);        // avg survival
-  DATA_SCALAR(cr);       // compensation ratio
-  DATA_SCALAR(rinit);    // initial number age 1 recruits
-  DATA_SCALAR(ro);       // average unfished recruitment
-  DATA_SCALAR(uo);       // average historical exploitation rate
-  DATA_SCALAR(asl);      // vul parameter 1
-  DATA_SCALAR(ahv);      // vul parameter 2
-  DATA_SCALAR(ahm);      // age half mature 
-  DATA_SCALAR(upow);     // utility power
-  DATA_VECTOR(ages); 
-  DATA_VECTOR(recmult);  // recruitment sequence
-  DATA_INTEGER(obj_ctl); // 0 = MAY, 1 = HARA utility
-  DATA_INTEGER(hcr);     // which harvest control rule 0 = linear; 1 = misery 
+  DATA_SCALAR(vbk);         // von bertalanffy k 
+  DATA_SCALAR(s);           // avg survival
+  DATA_SCALAR(cr);          // compensation ratio
+  DATA_SCALAR(rinit);       // initial number age 1 recruits
+  DATA_SCALAR(ro);          // average unfished recruitment
+  DATA_SCALAR(uo);          // average historical exploitation rate
+  DATA_SCALAR(asl);         // vul parameter 1
+  DATA_SCALAR(ahv);         // vul parameter 2
+  DATA_SCALAR(ahm);         // age half mature 
+  DATA_SCALAR(upow);        // utility power
+  DATA_VECTOR(ages);    
+  DATA_VECTOR(recmult);     // recruitment sequence
+  DATA_INTEGER(obj_ctl);    // 0 = MAY, 1 = HARA utility
+  DATA_INTEGER(hcr);        // which harvest control rule 0 = U(t); 1 = linear; 2 = logistic 
   
   vector<Type> n(n_age);
   vector<Type> vul(n_age);
@@ -81,6 +81,7 @@ Type objective_function<Type>::operator()()
   // parameters to solve 
   PARAMETER_VECTOR(par); 
   
+  // containers
   vector<Type> abar(n_year);
   vector<Type> yield(n_year);
   vector<Type> utility(n_year);
@@ -92,12 +93,12 @@ Type objective_function<Type>::operator()()
   
   // run simulation 
   for(int t = 0; t < n_year; t++){
-    vulb(t) = (vul*n*wt).sum();                                    // sumproduct(vul*n*w) across a
-    ssb(t) = (mwt*n).sum();                                        // sumproduct(mwt * n)
-    abar(t) = (ages*n).sum() / sum(n);                             // sumproduct(ages*n) / sum(n)
-    if(hcr == 0){ut(t) = par(t);}
+    vulb(t) = (vul*n*wt).sum();                                    
+    ssb(t) = (mwt*n).sum();                                        
+    abar(t) = (ages*n).sum() / sum(n);                             
+    if(hcr == 0){ut(t) = par(t);}                                  // solve entire U(t) sequence
     if(hcr == 1){ut(t) = ut_linear(par, vulb(t));}                 // linear hcr
-    //if(hcr == 1){ut(t) = ut_map(par, vulb(t), xinc);}              
+    if(hcr == 2){ut(t) = ut_logistic(par, vulb(t));}               // logistic hcr
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
@@ -115,15 +116,12 @@ Type objective_function<Type>::operator()()
 
   // objective function
   Type obj = 0;
-  if(obj_ctl == 0){  // yield objective
+  if(obj_ctl == 0){  
     obj -= sum(yield);
   }
-  if(obj_ctl == 1){  // hara utility objective
+  if(obj_ctl == 1){  
     obj -= sum(utility);
   }
-  // if(hcr == 1){
-  //  for(int i = 0; i < par.size(); i++){ obj += 0.000001*pow(par(i),2); }
-  // }
   return obj; 
 }
 

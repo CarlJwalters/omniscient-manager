@@ -95,7 +95,7 @@ tmb_data <- list(
   ages = ages,
   recmult = sim$dat$recmult,
   obj_ctl = 0, # 0 = MAY, 1 = utility
-  hcr = 1 # 0 = U(t), 1 = linear hcr, 2 = logistic hcr
+  hcr = 2 # 0 = U(t), 1 = linear hcr, 2 = logistic hcr
 )
 
 if(tmb_data$hcr == 0){
@@ -105,7 +105,7 @@ if(tmb_data$hcr == 1){
   tmb_pars <- list(par = c(0.5, 0.5))
 }
 if(tmb_data$hcr == 2){
-  tmb_pars <- ???
+  tmb_pars <- list(par = rep(1, 3))
 }
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"

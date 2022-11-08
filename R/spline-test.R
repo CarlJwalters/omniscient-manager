@@ -2,7 +2,7 @@
 library(splines)
 
 X <- seq(from=0, to=20, by=.01) # generating inputs
-B <- t(bs(X, knots=3, degree=3, intercept = FALSE)) # creating the B-splines
+B <- t(bs(X, knots=1, degree=1, intercept = FALSE)) # creating the B-splines
 num_data <- length(X); num_basis <- nrow(B)
 a0 <- 0 # intercept
 a <- rnorm(num_basis, 0, 1) # coefficients of B-splines

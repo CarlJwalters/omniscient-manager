@@ -25,11 +25,11 @@ Type ut_logistic(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
 { 
+  //NOTE YET WORKING
   // fit a beta-spline with basis determined by B
   vector<Type> logit_ut_pred = B*par;
   vector<Type> ans(B.rows());
   ans.setZero();
-
   Type val = 1e2; // some high initial value
   int idx = 0;
   for(int i = 0; i < ans.size(); i++){
@@ -113,6 +113,7 @@ Type objective_function<Type>::operator()()
   ssb.setZero(); vulb.setZero(); ut.setZero(); 
   
   // run simulation 
+  Type obj = 0;
   for(int t = 0; t < n_year; t++){
     vulb(t) = (vul*n*wt).sum();                                    
     ssb(t) = (mwt*n).sum();                                        
@@ -127,6 +128,14 @@ Type objective_function<Type>::operator()()
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    // plus group
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}         // advance fish one a
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             // recruits
+    
+    // objective function
+    if(obj_ctl == 0){  
+      obj -= yield(t);
+    }
+    if(obj_ctl == 1){  
+      obj -= utility(t);
+    }
   }
   
   REPORT(ssb);
@@ -136,14 +145,6 @@ Type objective_function<Type>::operator()()
   REPORT(utility);
   REPORT(ut); 
 
-  // objective function
-  Type obj = 0;
-  if(obj_ctl == 0){  
-    obj -= sum(yield);
-  }
-  if(obj_ctl == 1){  
-    obj -= sum(utility);
-  }
   return obj; 
 }
 

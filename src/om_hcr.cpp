@@ -26,25 +26,22 @@ template <class Type>
 Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
 { 
   // NOT YET WORKING
+  
   // fit a beta-spline with basis determined by B
-  //vector<Type> ao(1);
-  //ao(0) = par(0); 
-  //vector<Type> a(par.size());
-  //for(int i = 1; i < par.size(); i++){a(i) = par(i);}
-  vector<Type> ut_pred = B*par;
+  vector<Type> logit_ut_pred = B*par;
   vector<Type> ans(B.rows());
   ans.setZero();
 
   Type val = 1e2; // some high initial value
   int idx = 0;
   for(int i = 0; i < ans.size(); i++){
-    ans(i) = fabs(invlogit(ut_pred(i)) - vulb);
+    ans(i) = fabs(X(i) - vulb); // find closest place on X axis to vulb
     if(ans(i) < val){
       val = ans(i);
       idx = i;
      }
    }
-  Type out = invlogit(ut_pred(idx));
+  Type out = invlogit(logit_ut_pred(idx)); // map ut predictions to [0,1]
   return out;
 }
 

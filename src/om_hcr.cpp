@@ -29,9 +29,9 @@ Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
   // fit a beta-spline with basis determined by B
   Type offset = 1e-6; 
   vector<Type> ao(1);
-  ao(0) = exp(par(0)); 
+  ao(0) = par(0); 
   vector<Type> a(par.size()-1);
-  for(int i = 1; i < par.size(); i++){a(i-1) = exp(par(i));}
+  for(int i = 1; i < par.size(); i++){a(i-1) = par(i);}
   vector<Type> x_pred = X*ao + B*a;
   vector<Type> ans(B.rows());
   ans.setZero();

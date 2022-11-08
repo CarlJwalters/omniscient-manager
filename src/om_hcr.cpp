@@ -22,6 +22,34 @@ Type ut_logistic(vector<Type> par, Type vulb)
   return out;
 }  
 
+template <class Type> 
+Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
+{ 
+  // NOT YET WORKING
+  // fit a beta-spline with basis determined by B
+  Type offset = 1e-6; 
+  vector<Type> ao(1);
+  ao(0) = exp(par(0)); 
+  vector<Type> a(par.size()-1);
+  for(int i = 1; i < par.size(); i++){a(i-1) = exp(par(i));}
+  vector<Type> x_pred = X*ao + B*a;
+  vector<Type> ans(B.rows());
+  ans.setZero();
+
+  Type val = 1e2; // some high initial value
+  int idx = 0;
+  for(int i = 0; i < ans.size(); i++){
+    ans(i) = fabs(x_pred(i) - vulb);
+    if(ans(i) < val){
+      val = ans(i);
+      idx = i;
+     }
+   }
+  Type TAC = offset + x_pred(idx);
+  Type out = TAC/(vulb + offset);
+  return out;
+}
+
 template <class Type>
 Type objective_function<Type>::operator()()
 {
@@ -40,7 +68,9 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(obj_ctl);    // 0 = MAY, 1 = HARA utility
-  DATA_INTEGER(hcr);        // which harvest control rule 0 = U(t); 1 = linear; 2 = logistic 
+  DATA_INTEGER(hcr);        // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline  
+  DATA_MATRIX(B); 
+  DATA_MATRIX(X); 
   
   vector<Type> n(n_age);
   vector<Type> vul(n_age);
@@ -95,8 +125,9 @@ Type objective_function<Type>::operator()()
     ssb(t) = (mwt*n).sum();                                        
     abar(t) = (ages*n).sum() / sum(n);                             
     if(hcr == 0){ut(t) = par(t);}                                  // solve entire U(t) sequence
-    if(hcr == 1){ut(t) = ut_linear(par, vulb(t));}                 // linear hcr
-    if(hcr == 2){ut(t) = ut_logistic(par, vulb(t));}               // logistic hcr
+    if(hcr == 1){ut(t) = ut_linear(par, vulb(t));}                 // linear 
+    if(hcr == 2){ut(t) = ut_logistic(par, vulb(t));}               // logistic 
+    if(hcr == 3){ut(t) = ut_spline(par, B, X, vulb(t));}           // B-spline 
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 

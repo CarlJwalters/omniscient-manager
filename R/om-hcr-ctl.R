@@ -79,17 +79,16 @@ sdr <- c(0.25)
 ahv <- c(5)
 
 # Set up the B spline
-vulb_seq <- seq(from=0, to=2, by=.001) 
-B <- t(bs(vulb_seq, knots=2, degree=3, intercept = FALSE)) # creating the B-splines
+vulb_seq <- seq(from=0, to=5, by=.01) 
+B <- t(bs(vulb_seq,degree=5, intercept = FALSE)) # creating the B-splines
 num_basis <- nrow(B)
 a = rnorm(num_basis)
 Y_true <- as.vector(a%*%B)
 plot(arm::invlogit(Y_true)~vulb_seq)
 
-a = opt$par
-
 # simulate recruitment sequence
-# sim <- get_recmult(pbig, Rbig, sdr) 
+set.seed(13)
+sim <- get_recmult(pbig, Rbig, sdr) 
 
 tmb_data <- list(
   n_year = length(years),
@@ -124,10 +123,10 @@ if(tmb_data$hcr == 2){
 }
 if(tmb_data$hcr == 3){
   a <- rep(0, num_basis)
-  # ao <- 0
   tmb_pars <- list(par = c(a))
 }
 
+# set upper and lower bounds
 if(tmb_data$hcr == 0){
   lower = rep(0, length(years))
   upper = rep(1, length(years))
@@ -141,13 +140,12 @@ if(tmb_data$hcr > 0){
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
-
 dyn.load(dynlib("src/om_hcr"))
 obj <- MakeADFun(tmb_data, tmb_pars,  silent = F, DLL = "om_hcr")
 
-obj$fn()
-obj$gr()
-obj$report()$`ut`
+# obj$fn()
+# obj$gr()
+# obj$report()$`ut`
 
 # run om simulation
 opt <- nlminb(obj$par, obj$fn, obj$gr, 
@@ -156,11 +154,19 @@ opt <- nlminb(obj$par, obj$fn, obj$gr,
               )
 opt$objective
 
-plot(obj$report()$`ut`~obj$report()$`vulb`)
+plot(obj$report()$`ut`~obj$report()$`vulb`, ylab="Ut", xlab = "vulb", 
+     ylim = c(0,1))
+plot(obj$report(opt$par)$`yield`, type = "b")
 
-# -67.91805 spline
-#  -198.6367 logistic
-# -198.63 line 
+sum(obj$report(opt$par)$`ut`*obj$report(opt$par)$`vulb`)
+
+
+# 205.7563 spline
+# 208.94 line 
+ao = opt$par[1]
+a = opt$par[2:length(opt$par)]
+Y_true <- as.vector(ao*vulb_seq + a%*%B)
+plot(arm::invlogit(Y_true)~vulb_seq, ylim = c(0,1))
 
 
 # re-run the optimization until convergence achieved

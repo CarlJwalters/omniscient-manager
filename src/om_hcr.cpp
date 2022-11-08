@@ -45,8 +45,9 @@ Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
       idx = i;
      }
    }
-  Type TAC = offset + x_pred(idx);
-  Type out = TAC/(vulb + offset);
+  //Type TAC = offset + x_pred(idx);
+  //Type out = TAC/(vulb + offset);
+  Type out = offset + invlogit(x_pred(idx));
   return out;
 }
 

@@ -79,7 +79,7 @@ sdr <- c(0.25)
 ahv <- c(5)
 
 # Set up the B spline
-vulb_seq <- seq(from=0, to=2, by=.01) 
+vulb_seq <- seq(from=0, to=2, by=.001) 
 B <- t(bs(vulb_seq, knots=2, degree=3, intercept = FALSE)) # creating the B-splines
 num_basis <- nrow(B)
 a = rnorm(num_basis)

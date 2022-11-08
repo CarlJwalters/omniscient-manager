@@ -25,8 +25,6 @@ Type ut_logistic(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
 { 
-  // NOT YET WORKING
-  
   // fit a beta-spline with basis determined by B
   vector<Type> logit_ut_pred = B*par;
   vector<Type> ans(B.rows());

@@ -23,23 +23,11 @@ Type ut_logistic(vector<Type> par, Type vulb)
 }  
 
 template <class Type> 
-Type ut_spline(vector<Type> par, matrix<Type> B, matrix<Type> X, Type vulb)
+Type ut_map(vector<Type> par, Type vulb, Type xinc)
 { 
-  //NOTE YET WORKING
-  // fit a beta-spline with basis determined by B
-  vector<Type> logit_ut_pred = B*par;
-  vector<Type> ans(B.rows());
-  ans.setZero();
-  Type val = 1e2; // some high initial value
-  int idx = 0;
-  for(int i = 0; i < ans.size(); i++){
-    ans(i) = fabs(X(i) - vulb); // find closest place on X axis to vulb
-    if(ans(i) < val){
-      val = ans(i);
-      idx = i;
-     }
-   }
-  Type out = invlogit(logit_ut_pred(idx)); // map ut predictions to [0,1]
+  int ix = CppAD::Integer(vulb / xinc);
+  Type D = vulb - ix*xinc; 
+  Type out = par(ix) + (par(ix + 1) - par(ix))*D;
   return out;
 }
 
@@ -60,11 +48,9 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(upow);        // utility power
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
-  DATA_INTEGER(obj_ctl);    // 0 = MAY, 1 = HARA utility
-  DATA_INTEGER(hcr);        // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline  
-  DATA_MATRIX(B); 
-  DATA_MATRIX(X); 
-  
+  DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
+  DATA_INTEGER(hcrmode);    // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = experimental  
+
   vector<Type> n(n_age);
   vector<Type> vul(n_age);
   vector<Type> wt(n_age);
@@ -83,26 +69,25 @@ Type objective_function<Type>::operator()()
     if(a == 0){ 
       Lo(a) = 1;
       Lf(a) = 1; 
-    } 
-    if(a > 0 && a < (n_age - 1)){ // ages 2-19
+    }  
+    else if(a > 0 && a < (n_age - 1)){ // ages 2-19
       Lo(a) = Lo(a-1)*s;
       Lf(a) = Lf(a-1)*s*(1 - vul(a-1)*uo);
     }
-    if(a == (n_age - 1)){         // plus group age 20
+    else if(a == (n_age - 1)){         // plus group age 20
       Lo(a) = Lo(a - 1)*s / (1 - s); 
       Lf(a) = Lf(a - 1)*s*(1 - vul(a-1)*uo) / (1 - s*(1 - vul(a-1)*uo)); 
     }
   } 
+  
   n = rinit*Lf; 
   mwt = mat*wt; 
   sbro = (Lo*mwt).sum(); 
   Type reca = cr/sbro; 
   Type recb = (cr - 1) / (ro*sbro); 
   
-  // parameters to solve 
   PARAMETER_VECTOR(par); 
   
-  // containers
   vector<Type> abar(n_year);
   vector<Type> yield(n_year);
   vector<Type> utility(n_year);
@@ -112,29 +97,56 @@ Type objective_function<Type>::operator()()
   abar.setZero(); yield.setZero(); utility.setZero();
   ssb.setZero(); vulb.setZero(); ut.setZero(); 
   
-  // run simulation 
   Type obj = 0;
+  
   for(int t = 0; t < n_year; t++){
     vulb(t) = (vul*n*wt).sum();                                    
     ssb(t) = (mwt*n).sum();                                        
     abar(t) = (ages*n).sum() / sum(n);                             
-    if(hcr == 0){ut(t) = par(t);}                                  // solve entire U(t) sequence
-    if(hcr == 1){ut(t) = ut_linear(par, vulb(t));}                 // linear 
-    if(hcr == 2){ut(t) = ut_logistic(par, vulb(t));}               // logistic 
-    if(hcr == 3){ut(t) = ut_spline(par, B, X, vulb(t));}           // B-spline 
+    
+    switch(hcrmode){
+      case 0:
+        ut(t) = par(t);
+      break;
+        
+      case 1:
+        ut(t) = ut_linear(par, vulb(t));
+      break;
+        
+      case 2:
+        ut(t) = ut_logistic(par, vulb(t));
+      break;
+        
+      case 3:
+        ut(t) = ut_map(par, vulb(t));
+      break;
+        
+      default:
+        std::cout<<"Ut code not yet implemented."<<std::endl;
+      exit(EXIT_FAILURE);
+      break;
+    }
+    
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
-    n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    // plus group
-    for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}         // advance fish one a
-    n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             // recruits
+    n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
+    for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
+    n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
     
-    // objective function
-    if(obj_ctl == 0){  
-      obj -= yield(t);
-    }
-    if(obj_ctl == 1){  
-      obj -= utility(t);
+    switch(objmode){
+      case 0:
+        obj -= yield(t);
+      break;
+      
+      case 1:
+        obj -= utility(t);
+      break;
+      
+      default:
+        std::cout<<"Objective code not yet implemented."<<std::endl;
+      exit(EXIT_FAILURE);
+      break;
     }
   }
   
@@ -147,4 +159,3 @@ Type objective_function<Type>::operator()()
 
   return obj; 
 }
-

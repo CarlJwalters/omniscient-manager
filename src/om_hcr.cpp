@@ -23,11 +23,16 @@ Type ut_logistic(vector<Type> par, Type vulb)
 }  
 
 template <class Type> 
-Type ut_map(vector<Type> par, Type vulb, Type xinc)
+Type ut_map(vector<Type> par, Type vulb)
 { 
-  int ix = CppAD::Integer(vulb / xinc);
-  Type D = vulb - ix*xinc; 
-  Type out = par(ix) + (par(ix + 1) - par(ix))*D;
+  //int ix = CppAD::Integer(vulb / xinc);
+  //Type D = vulb - ix*xinc; 
+  //Type out = par(ix) + (par(ix + 1) - par(ix))*D;
+  vector<Type> vec(2); 
+  vec.setZero(); 
+  vec(0) = 0; 
+  vec(1) = par(0)*(vulb-par(1))/vulb; 
+  Type out = max(vec);  
   return out;
 }
 

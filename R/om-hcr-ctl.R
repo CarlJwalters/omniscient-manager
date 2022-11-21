@@ -105,10 +105,8 @@ tmb_data <- list(
   upow = upow,
   ages = ages,
   recmult = sim$dat$recmult,
-  obj_ctl = 0, # 0 = MAY, 1 = utility
-  hcr = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
-  B = as.matrix(t(B)), # need to transpose for TMB
-  X = as.matrix(vulb_seq)
+  objmode = 0, # 0 = MAY, 1 = utility
+  hcrmode = 3 # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = experimental ut_map
 )
 
 # set up the pars
@@ -122,8 +120,7 @@ if(tmb_data$hcr == 2){
   tmb_pars <- list(par = jitter(rep(1, 3)))
 }
 if(tmb_data$hcr == 3){
-  a <- rep(0, num_basis)
-  tmb_pars <- list(par = c(a))
+  tmb_pars <- list(par = c(0,0))
 }
 
 # set upper and lower bounds
@@ -143,9 +140,9 @@ compile(cppfile)
 dyn.load(dynlib("src/om_hcr"))
 obj <- MakeADFun(tmb_data, tmb_pars,  silent = F, DLL = "om_hcr")
 
-# obj$fn()
-# obj$gr()
-# obj$report()$`ut`
+obj$fn()
+obj$gr()
+obj$report()$`ut`
 
 # run om simulation
 opt <- nlminb(obj$par, obj$fn, obj$gr, 

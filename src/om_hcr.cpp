@@ -7,6 +7,7 @@
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
+  // par(0) = cslope, par(1) = bmin
   vector<Type> seq(2); 
   seq.setZero(); 
   seq(0) = 0; 

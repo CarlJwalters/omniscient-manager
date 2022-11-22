@@ -38,12 +38,8 @@ Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
   // setup spline object 
   tmbutils::splinefun<Type> sp(knots,par);
   Type TAC = sp(vulb); 
-  Type out = 0; 
-  if (TAC > vulb){
-    out = 1.0;
-  } else if (TAC <= vulb){
-    out = TAC/vulb; 
-  }
+  Type out = TAC/vulb; 
+  if(out < 0){ out = 0;} else if (out > 1.0){ out = 1.0;}
   return out;
 }
 

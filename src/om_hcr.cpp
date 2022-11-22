@@ -7,10 +7,11 @@
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
-  Type G = 10; 
-  Type offset = 1e-6; 
-  Type TAC = offset + (par(1)*(vulb - par(0)))/(1+exp(-G*(vulb-par(0)))); 
-  Type out = TAC/(vulb + offset);                                           
+  vector<Type> seq(2); 
+  seq.setZero(); 
+  seq(0) = 0; 
+  seq(1) = par(0)*(vulb-par(1))/vulb; 
+  Type out = max(seq);               
   return out;
 }  
 
@@ -23,23 +24,12 @@ Type ut_logistic(vector<Type> par, Type vulb)
 }  
 
 template <class Type> 
-Type ut_map(vector<Type> par, Type xinc, Type vulb)
-{ 
-  // experimental--not yet working
-  int ix = CppAD::Integer(vulb / xinc);
-  Type D = vulb - ix*xinc; 
-  Type out = par(ix) + (par(ix + 1) - par(ix))*D;
-  return out;
-}
-
-template <class Type> 
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
 { 
-  // setup spline object 
   tmbutils::splinefun<Type> sp(knots,par);
   Type TAC = sp(vulb); 
   Type out = TAC/vulb; 
-  if(out < 0){ out = 0;} else if (out > 1.0){ out = 1.0;}
+  if(out < 0){ out = 0;} else if (out > 1){ out = 1;}
   return out;
 }
 
@@ -62,7 +52,6 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
   DATA_INTEGER(hcrmode);    // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = experimental  
-  DATA_SCALAR(xinc); 
   DATA_VECTOR(knots); 
 
   vector<Type> n(n_age);
@@ -130,12 +119,8 @@ Type objective_function<Type>::operator()()
       case 2:
         ut(t) = ut_logistic(par, vulb(t));
       break;
-        
-      case 3:
-        ut(t) = ut_map(par, xinc, vulb(t));
-      break;
       
-      case 4:
+      case 3:
         ut(t) = ut_spline(par, knots, vulb(t));
       break;
 

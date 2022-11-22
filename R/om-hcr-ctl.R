@@ -62,8 +62,8 @@ ages <- 1:20 # slot 1 = recruits
 cr <- 6
 vbk <- .23
 s <- .86
-rinit <- 0.6
-ro <- 1
+rinit <- 1
+ro <- 1.0
 uo <- 0.13
 asl <- 0.5
 ahm <- 6
@@ -71,24 +71,16 @@ upow <- 0.6
 ahv <- 5
 
 # draw recruitment sequence
-#set.seed(1)
+# set.seed(1)
 
 pbig <- c(0.02)
 Rbig <- c(7)
 sdr <- c(0.25)
 ahv <- c(5)
 
-# Set up the B spline
-vulb_seq <- seq(from=0, to=5, by=.01) 
-B <- t(bs(vulb_seq,degree=5, intercept = FALSE)) # creating the B-splines
-num_basis <- nrow(B)
-a = rnorm(num_basis)
-Y_true <- as.vector(a%*%B)
-plot(arm::invlogit(Y_true)~vulb_seq)
-
 # simulate recruitment sequence
 set.seed(13)
-sim <- get_recmult(pbig, Rbig, sdr) 
+sim <- get_recmult(pbig, Rbig, sdr)
 
 tmb_data <- list(
   n_year = length(years),
@@ -106,99 +98,112 @@ tmb_data <- list(
   ages = ages,
   recmult = sim$dat$recmult,
   objmode = 0, # 0 = MAY, 1 = utility
-  hcrmode = 3 # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = experimental ut_map
+  hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
+  knots = seq(from = 0, to = 2, length.out = 5)
 )
 
 # set up the pars
-if(tmb_data$hcr == 0){
-  tmb_pars <- list(par = rep(0.5, length(years)))
+if (tmb_data$hcr == 0) {
+  tmb_pars <- list(par = rep(0.1, length(years)))
 }
-if(tmb_data$hcr == 1){
-  tmb_pars <- list(par = c(0.5, 0.5))
+if (tmb_data$hcr == 1) {
+  tmb_pars <- list(par = c(0, 0))
 }
-if(tmb_data$hcr == 2){
+if (tmb_data$hcr == 2) {
   tmb_pars <- list(par = jitter(rep(1, 3)))
 }
-if(tmb_data$hcr == 3){
-  tmb_pars <- list(par = c(0,0))
+if (tmb_data$hcr == 3) {
+  tmb_pars <- list(par = rep(0.01, length(tmb_data$knots)))
 }
 
 # set upper and lower bounds
-if(tmb_data$hcr == 0){
-  lower = rep(0, length(years))
-  upper = rep(1, length(years))
-} 
-if(tmb_data$hcr > 0){
-  lower = rep(-Inf, length(tmb_pars$par))
-  upper = rep(Inf, length(tmb_pars$par))
+if (tmb_data$hcr == 0) {
+  lower <- rep(0, length(years))
+  upper <- rep(1, length(years))
+}
+if (tmb_data$hcr > 0) {
+  lower <- rep(-Inf, length(tmb_pars$par))
+  upper <- rep(Inf, length(tmb_pars$par))
 }
 
-#tmb_pars <- list(par = log(rep(0.1, length(a) + 1)))
+# tmb_pars <- list(par = log(rep(0.1, length(a) + 1)))
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(dynlib("src/om_hcr"))
-obj <- MakeADFun(tmb_data, tmb_pars,  silent = F, DLL = "om_hcr")
+obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 
 obj$fn()
 obj$gr()
 obj$report()$`ut`
 
 # run om simulation
-opt <- nlminb(obj$par, obj$fn, obj$gr, 
-              lower = lower, 
-              upper = upper
-              )
-opt$objective
+opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 
-plot(obj$report()$`ut`~obj$report()$`vulb`, ylab="Ut", xlab = "vulb", 
-     ylim = c(0,1))
-plot(obj$report(opt$par)$`yield`, type = "b")
-
-sum(obj$report(opt$par)$`ut`*obj$report(opt$par)$`vulb`)
-
-
-# 205.7563 spline
-# 208.94 line 
-ao = opt$par[1]
-a = opt$par[2:length(opt$par)]
-Y_true <- as.vector(ao*vulb_seq + a%*%B)
-plot(arm::invlogit(Y_true)~vulb_seq, ylim = c(0,1))
-
-
-# re-run the optimization until convergence achieved
 while (opt$convergence == 1) {
   tmb_pars <- list(par = opt$par)
   obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
-  opt <- nlminb(obj$par, obj$fn, obj$gr,
-                lower = rep(0, length(years)),
-                upper = rep(1, length(years))
-  )
+  opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
+}
+
+opt
+
+
+sdreport(obj)
+opt$objective
+
+plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
+       obj$report(opt$par)$`vulb`, type = "b", xlim = c(0, 2), 
+     xlab = "vulnerable biomass", ylab = "TAC")
+points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
+         obj$report(opt$par)$`vulb`, col = "blue", type = "b")
+
+plot(obj$report()$`ut` ~ obj$report()$`vulb`,
+  ylab = "Ut", xlab = "vulb",
+  main = paste0("objective = ", round(-opt$objective, 2)),
+  ylim = c(0, 1)
+)
+
+
+plot(obj$report(opt$par)$`yield`, type = "b")
+
+plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, type = "b")
+points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, col = "blue", type = "b")
+
+abline(0, 1)
+tmb_data$objmode
+
+
+while (opt$convergence == 1) {
+  tmb_pars <- list(par = opt$par)
+  obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
+  opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 }
 opt$objective
-vulb = seq(from = 0, to = 10, by = 0.05)
+vulb <- seq(from = 0, to = 10, by = 0.05)
 
-Ut = opt$par[1] / (1 + exp(-opt$par[2]*(vulb-opt$par[3])))
-lines(Ut~vulb, type = "l")
+Ut <- opt$par[1] / (1 + exp(-opt$par[2] * (vulb - opt$par[3])))
+lines(Ut ~ vulb, type = "l")
 opt$par
 
 
 # 201.26 for logistic
 # 201.24 for linear
 # 217.344
-SD = sdreport( obj ) # standard errors
+SD <- sdreport(obj) # standard errors
 opt$par
 
 # spline play
 library(splines)
-X <- seq(from=0, to=20, by=.1) # generating inputs
-B <- t(bs(X, knots=3, degree=3, intercept = TRUE)) # creating the B-splines
-num_data <- length(X); num_basis <- nrow(B)
+X <- seq(from = 0, to = 20, by = .1) # generating inputs
+B <- t(bs(X, knots = 3, degree = 3, intercept = TRUE)) # creating the B-splines
+num_data <- length(X)
+num_basis <- nrow(B)
 a0 <- 0 # intercept
 a <- rnorm(num_basis, 0, 1) # coefficients of B-splines
-Y_true <- as.vector(a0*X + a%*%B) # generating the output
-Y <- Y_true + rnorm(length(X),0,.2)
-plot(Y~X)
+Y_true <- as.vector(a0 * X + a %*% B) # generating the output
+Y <- Y_true + rnorm(length(X), 0, .2)
+plot(Y ~ X)
 
 
 
@@ -209,24 +214,27 @@ X.bs
 
 
 
-opt <- nlminb(opt$par, obj$fn, obj$gr, 
-              lower = lower, 
-              upper = upper
-             )
+opt <- nlminb(opt$par, obj$fn, obj$gr,
+  lower = lower,
+  upper = upper
+)
 opt$convergence
 
 plot(opt$par, type = "b")
 
-plot(opt$par~obj$report(opt$par)$`vulb`)
-dat <- data.frame(Ut = opt$par, vulb=obj$report(opt$par)$`vulb`, 
-                  time = 1:n_year)
+plot(opt$par ~ obj$report(opt$par)$`vulb`)
+dat <- data.frame(
+  Ut = opt$par, vulb = obj$report(opt$par)$`vulb`,
+  time = 1:n_year
+)
 
 library(mgcv)
-gam_setup = gam(dat$Ut ~ s(dat$vulb, bs = "cs"),
-                fit=FALSE)
+gam_setup <- gam(dat$Ut ~ s(dat$vulb, bs = "cs"),
+  fit = FALSE
+)
 
-#Extrtact penelization matrices
-S_vulb = gam_setup$smooth[[1]]$S[[1]]
+# Extrtact penelization matrices
+S_vulb <- gam_setup$smooth[[1]]$S[[1]]
 
 
 devtools::install_github("AckerDWM/gg3D")
@@ -241,7 +249,7 @@ out <- purrr::pmap(to_sim, run_om) # testing
 future::plan(multisession)
 system.time({
   out <- future_pmap(to_sim, run_om,
-                     .options = furrr_options(seed = TRUE),
-                     .progress = TRUE
+    .options = furrr_options(seed = TRUE),
+    .progress = TRUE
   )
 })

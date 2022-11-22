@@ -51,7 +51,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
-  DATA_INTEGER(hcrmode);    // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = experimental  
+  DATA_INTEGER(hcrmode);    // rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline  
   DATA_VECTOR(knots); 
 
   vector<Type> n(n_age);

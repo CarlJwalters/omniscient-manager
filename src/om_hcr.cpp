@@ -23,16 +23,26 @@ Type ut_logistic(vector<Type> par, Type vulb)
 }  
 
 template <class Type> 
-Type ut_map(vector<Type> par, Type vulb)
+Type ut_map(vector<Type> par, Type xinc, Type vulb)
 { 
-  //int ix = CppAD::Integer(vulb / xinc);
-  //Type D = vulb - ix*xinc; 
-  //Type out = par(ix) + (par(ix + 1) - par(ix))*D;
-  vector<Type> vec(2); 
-  vec.setZero(); 
-  vec(0) = 0; 
-  vec(1) = par(0)*(vulb-par(1))/vulb; 
-  Type out = max(vec);  
+  int ix = CppAD::Integer(vulb / xinc);
+  Type D = vulb - ix*xinc; 
+  Type out = par(ix) + (par(ix + 1) - par(ix))*D;
+  return out;
+}
+
+template <class Type> 
+Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
+{ 
+  // setup spline object 
+  tmbutils::splinefun<Type> sp(knots,par);
+  Type TAC = sp(vulb); 
+  Type out = 0; 
+  if(TAC >= vulb){
+    out = 1.0;
+  } else if(TAC < vulb){
+   out = TAC/vulb; 
+  }
   return out;
 }
 
@@ -55,6 +65,8 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
   DATA_INTEGER(hcrmode);    // which rule 0 = U(t); 1 = linear; 2 = logistic; 3 = experimental  
+  DATA_SCALAR(xinc); 
+  DATA_VECTOR(knots); 
 
   vector<Type> n(n_age);
   vector<Type> vul(n_age);
@@ -123,9 +135,13 @@ Type objective_function<Type>::operator()()
       break;
         
       case 3:
-        ut(t) = ut_map(par, vulb(t));
+        ut(t) = ut_map(par, xinc, vulb(t));
       break;
-        
+      
+      case 4:
+        ut(t) = ut_spline(par, knots, vulb(t));
+      break;
+
       default:
         std::cout<<"Ut code not yet implemented."<<std::endl;
       exit(EXIT_FAILURE);

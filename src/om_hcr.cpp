@@ -7,11 +7,11 @@
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
-  // par(0) = cslope, par(1) = bmin
+  // par(0) = ln(cslope), par(1) = ln(bmin)
   vector<Type> seq(2); 
   seq.setZero(); 
   seq(0) = 0; 
-  seq(1) = par(0)*(vulb-par(1))/vulb; 
+  seq(1) = exp(par(0))*(vulb-exp(par(1)))/vulb; 
   Type out = max(seq);               
   return out;
 }  
@@ -56,13 +56,14 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(knots); 
 
   vector<Type> n(n_age);
+  vector<Type> ninit(n_age);
   vector<Type> vul(n_age);
   vector<Type> wt(n_age);
   vector<Type> mat(n_age);
   vector<Type> Lo(n_age);   
   vector<Type> mwt(n_age);
   vector<Type> Lf(n_age);
-  n.setZero(); vul.setZero(); wt.setZero(); mat.setZero();
+  n.setZero(); ninit.setZero(); vul.setZero(); wt.setZero(); mat.setZero();
   Lo.setZero(); mwt.setZero(); Lf.setZero(); Type sbro = 0;  
   
   // set up leading vectors
@@ -84,7 +85,7 @@ Type objective_function<Type>::operator()()
     }
   } 
   
-  n = rinit*Lf; 
+  ninit = rinit*Lf; 
   mwt = mat*wt; 
   sbro = (Lo*mwt).sum(); 
   Type reca = cr/sbro; 
@@ -101,9 +102,11 @@ Type objective_function<Type>::operator()()
   abar.setZero(); yield.setZero(); utility.setZero();
   ssb.setZero(); vulb.setZero(); ut.setZero(); 
   
+  n = ninit; 
   Type obj = 0;
   
   for(int t = 0; t < n_year; t++){
+    if(t%100==0){n = ninit;}
     vulb(t) = (vul*n*wt).sum();                                    
     ssb(t) = (mwt*n).sum();                                        
     abar(t) = (ages*n).sum() / sum(n);                             

@@ -62,7 +62,7 @@ ages <- 1:20 # slot 1 = recruits
 cr <- 6
 vbk <- .23
 s <- .86
-rinit <- 1
+rinit <- 10
 ro <- 1.0
 uo <- 0.13
 asl <- 0.5
@@ -73,9 +73,9 @@ ahv <- 5
 # draw recruitment sequence
 # set.seed(1)
 
-pbig <- c(0.02)
+pbig <- c(0.05)
 Rbig <- c(7)
-sdr <- c(0.25)
+sdr <- c(0.6)
 ahv <- c(5)
 
 # simulate recruitment sequence
@@ -97,9 +97,9 @@ tmb_data <- list(
   upow = upow,
   ages = ages,
   recmult = sim$dat$recmult,
-  objmode = 0, # 0 = MAY, 1 = utility
-  hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
-  knots = seq(from = 0, to = 2, length.out = 5)
+  objmode = 1, # 0 = MAY, 1 = utility
+  hcrmode = 2, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
+  knots = seq(from = 0, to = 0.75, length.out = 4)
 )
 
 # set up the pars
@@ -107,10 +107,10 @@ if (tmb_data$hcr == 0) {
   tmb_pars <- list(par = rep(0.1, length(years)))
 }
 if (tmb_data$hcr == 1) {
-  tmb_pars <- list(par = c(0, 0))
+  tmb_pars <- list(par = c(0.1, 0.1))
 }
 if (tmb_data$hcr == 2) {
-  tmb_pars <- list(par = jitter(rep(1, 3)))
+  tmb_pars <- list(par = rep(1, 3))
 }
 if (tmb_data$hcr == 3) {
   tmb_pars <- list(par = rep(0.01, length(tmb_data$knots)))
@@ -126,7 +126,6 @@ if (tmb_data$hcr > 0) {
   upper <- rep(Inf, length(tmb_pars$par))
 }
 
-# tmb_pars <- list(par = log(rep(0.1, length(a) + 1)))
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
@@ -148,12 +147,20 @@ while (opt$convergence == 1) {
 
 opt
 
-
 sdreport(obj)
 opt$objective
 
+#bmin  0.2785293 when rinit = 10, cslope = 0.2108182
+#bmin 0.3486945 when rinit = 1, cslope = 0.2389048
+#bmin 0.2361415 when rinit = 0.1, clsope = 0.2038859
+#bmin 0.2458969 when rinit = 0.01, cslope = 0.2177752
+#bmin 0.2060114 when rinit = 0.001, cslope = 0.213996
+#bmin 0.2250819 when rinit = 0.0001, cslope = 0.2477414
+
+#------------------------------------------------------------------------------
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
-       obj$report(opt$par)$`vulb`, type = "b", xlim = c(0, 2), 
+       obj$report(opt$par)$`vulb`, type = "b", xlim = c(0, 2),
+     ylim = c(0, 0.5), 
      xlab = "vulnerable biomass", ylab = "TAC")
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
          obj$report(opt$par)$`vulb`, col = "blue", type = "b")
@@ -166,7 +173,6 @@ plot(obj$report()$`ut` ~ obj$report()$`vulb`,
 
 
 plot(obj$report(opt$par)$`yield`, type = "b")
-
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, type = "b")
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, col = "blue", type = "b")
 

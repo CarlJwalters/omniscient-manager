@@ -54,11 +54,7 @@ get_recmult <- function(pbig, Rbig, sdr) {
 # leading parameters/values for simulation
 years <- 1:2000
 n_year <- length(years)
-pbig <- 0.05
-Rbig <- 10
-sdr <- 0.4
-
-ages <- 1:20 # slot 1 = recruits
+ages <- 1:20 
 cr <- 6
 vbk <- .23
 s <- .86
@@ -70,13 +66,10 @@ ahm <- 6
 upow <- 0.6
 ahv <- 5
 
-# draw recruitment sequence
-# set.seed(1)
-
-pbig <- c(0.05)
-Rbig <- c(7)
-sdr <- c(0.6)
-ahv <- c(5)
+pbig <- 0.05
+Rbig <- 7
+sdr <- 0.6
+ahv <- 5
 
 # simulate recruitment sequence
 set.seed(13)

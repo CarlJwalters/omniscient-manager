@@ -54,7 +54,7 @@ get_recmult <- function(pbig, Rbig, sdr) {
 # leading parameters/values for simulation
 years <- 1:2000
 n_year <- length(years)
-ages <- 1:20 
+ages <- 1:20
 cr <- 6
 vbk <- .23
 s <- .86
@@ -91,7 +91,7 @@ tmb_data <- list(
   ages = ages,
   recmult = sim$dat$recmult,
   objmode = 1, # 0 = MAY, 1 = utility
-  hcrmode = 2, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
+  hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
   knots = seq(from = 0, to = 0.75, length.out = 4)
 )
 
@@ -143,20 +143,22 @@ opt
 sdreport(obj)
 opt$objective
 
-#bmin  0.2785293 when rinit = 10, cslope = 0.2108182
-#bmin 0.3486945 when rinit = 1, cslope = 0.2389048
-#bmin 0.2361415 when rinit = 0.1, clsope = 0.2038859
-#bmin 0.2458969 when rinit = 0.01, cslope = 0.2177752
-#bmin 0.2060114 when rinit = 0.001, cslope = 0.213996
-#bmin 0.2250819 when rinit = 0.0001, cslope = 0.2477414
+# bmin  0.2785293 when rinit = 10, cslope = 0.2108182
+# bmin 0.3486945 when rinit = 1, cslope = 0.2389048
+# bmin 0.2361415 when rinit = 0.1, clsope = 0.2038859
+# bmin 0.2458969 when rinit = 0.01, cslope = 0.2177752
+# bmin 0.2060114 when rinit = 0.001, cslope = 0.213996
+# bmin 0.2250819 when rinit = 0.0001, cslope = 0.2477414
 
 #------------------------------------------------------------------------------
-plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
-       obj$report(opt$par)$`vulb`, type = "b", xlim = c(0, 2),
-     ylim = c(0, 0.5), 
-     xlab = "vulnerable biomass", ylab = "TAC")
-points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
-         obj$report(opt$par)$`vulb`, col = "blue", type = "b")
+plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
+  obj$report(opt$par)$`vulb`,
+type = "b", xlim = c(0, 2),
+ylim = c(0, 0.5),
+xlab = "vulnerable biomass", ylab = "TAC"
+)
+points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
+  obj$report(opt$par)$`vulb`, col = "blue", type = "b")
 
 plot(obj$report()$`ut` ~ obj$report()$`vulb`,
   ylab = "Ut", xlab = "vulb",
@@ -168,87 +170,3 @@ plot(obj$report()$`ut` ~ obj$report()$`vulb`,
 plot(obj$report(opt$par)$`yield`, type = "b")
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, type = "b")
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, col = "blue", type = "b")
-
-abline(0, 1)
-tmb_data$objmode
-
-
-while (opt$convergence == 1) {
-  tmb_pars <- list(par = opt$par)
-  obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
-  opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-}
-opt$objective
-vulb <- seq(from = 0, to = 10, by = 0.05)
-
-Ut <- opt$par[1] / (1 + exp(-opt$par[2] * (vulb - opt$par[3])))
-lines(Ut ~ vulb, type = "l")
-opt$par
-
-
-# 201.26 for logistic
-# 201.24 for linear
-# 217.344
-SD <- sdreport(obj) # standard errors
-opt$par
-
-# spline play
-library(splines)
-X <- seq(from = 0, to = 20, by = .1) # generating inputs
-B <- t(bs(X, knots = 3, degree = 3, intercept = TRUE)) # creating the B-splines
-num_data <- length(X)
-num_basis <- nrow(B)
-a0 <- 0 # intercept
-a <- rnorm(num_basis, 0, 1) # coefficients of B-splines
-Y_true <- as.vector(a0 * X + a %*% B) # generating the output
-Y <- Y_true + rnorm(length(X), 0, .2)
-plot(Y ~ X)
-
-
-
-Knots <- default.knots(vulb, K)
-
-X.bs
-
-
-
-
-opt <- nlminb(opt$par, obj$fn, obj$gr,
-  lower = lower,
-  upper = upper
-)
-opt$convergence
-
-plot(opt$par, type = "b")
-
-plot(opt$par ~ obj$report(opt$par)$`vulb`)
-dat <- data.frame(
-  Ut = opt$par, vulb = obj$report(opt$par)$`vulb`,
-  time = 1:n_year
-)
-
-library(mgcv)
-gam_setup <- gam(dat$Ut ~ s(dat$vulb, bs = "cs"),
-  fit = FALSE
-)
-
-# Extrtact penelization matrices
-S_vulb <- gam_setup$smooth[[1]]$S[[1]]
-
-
-devtools::install_github("AckerDWM/gg3D")
-to_sim <- expand.grid(pbig = pbig, Rbig = Rbig, sdr = sdr, ahv = ahv, iter = iter)
-to_sim <- to_sim %>% distinct()
-glimpse(to_sim)
-
-# set.seed(1)
-out <- purrr::pmap(to_sim, run_om) # testing
-
-
-future::plan(multisession)
-system.time({
-  out <- future_pmap(to_sim, run_om,
-    .options = furrr_options(seed = TRUE),
-    .progress = TRUE
-  )
-})

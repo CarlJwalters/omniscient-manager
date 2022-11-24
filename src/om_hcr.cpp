@@ -28,8 +28,7 @@ template <class Type>
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
 { 
   tmbutils::splinefun<Type> sp(knots,par);
-  Type out = 0; 
-  if(vulb < 2.0){ out = sp(vulb);}else{out = par(par.size()-1);}
+  Type out = sp(vulb);
   return out;
 }
 

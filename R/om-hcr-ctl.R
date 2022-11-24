@@ -58,7 +58,7 @@ ages <- 1:20
 cr <- 6
 vbk <- .23
 s <- .86
-rinit <- 0.001
+rinit <- 0.01
 ro <- 1.0
 uo <- 0.13
 asl <- 0.5
@@ -92,7 +92,7 @@ tmb_data <- list(
   recmult = sim$dat$recmult,
   objmode = 1, # 0 = MAY, 1 = utility
   hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
-  knots = seq(from = 0, to = 10, length.out = 5)
+  knots = c(0, 0.5, 1.0, 1.5, 10)
 )
 
 # set up the pars
@@ -106,7 +106,7 @@ if (tmb_data$hcr == 2) {
   tmb_pars <- list(par = rep(1, 3))
 }
 if (tmb_data$hcr == 3) {
-  tmb_pars <- list(par = rep(0.01, length(tmb_data$knots)))
+  tmb_pars <- list(par = rep(0.2, length(tmb_data$knots)))
 }
 
 # set upper and lower bounds
@@ -125,9 +125,9 @@ compile(cppfile)
 dyn.load(dynlib("src/om_hcr"))
 obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 
-obj$fn()
-obj$gr()
-obj$report()$`ut`
+# obj$fn()
+# obj$gr()
+# obj$report()$`ut`
 
 # run om simulation
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -166,6 +166,7 @@ plot(obj$report()$`ut` ~ obj$report()$`vulb`,
 
 
 plot(obj$report(opt$par)$`yield`, type = "b")
-plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, type = "b")
+plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ 
+       obj$report(opt$par)$`vulb`, type = "p", xlab = "vulb", ylab = "TAC")
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, col = "blue", type = "b")
 

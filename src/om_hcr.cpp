@@ -4,6 +4,7 @@
  *             cahill & walters oct 2022
  */
 
+// linear rule
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
@@ -16,6 +17,7 @@ Type ut_linear(vector<Type> par, Type vulb)
   return out;
 }  
 
+// logistic rule
 template <class Type> 
 Type ut_logistic(vector<Type> par, Type vulb)
 { 
@@ -24,6 +26,7 @@ Type ut_logistic(vector<Type> par, Type vulb)
   return out;
 }  
 
+// spline rule
 template <class Type> 
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
 { 
@@ -32,16 +35,16 @@ Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
   return out;
 }
 
+// rectilinear rule
 template <class Type> 
 Type ut_rect(vector<Type> par, Type vulb)
 { 
   vector<Type> seq1(2); 
   vector<Type> seq2(2); 
-  
   seq1.setZero(); seq2.setZero();  
+  
   seq1(0) = 0; 
   seq1(1) = par(0)*(vulb-par(1))/(par(2) - par(1)); 
-  
   seq2(0) = par(0); 
   seq2(1) = max(seq1);
   
@@ -67,7 +70,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
-  DATA_INTEGER(hcrmode);    // rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline  
+  DATA_INTEGER(hcrmode);    // rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline, 4 = rectilinear
   DATA_VECTOR(knots); 
 
   vector<Type> n(n_age);

@@ -91,22 +91,23 @@ tmb_data <- list(
   ages = ages,
   recmult = sim$dat$recmult,
   objmode = 1, # 0 = MAY, 1 = utility
-  hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
-  knots = c(0, 0.5, 1.0, 1.5, 10)
+  hcrmode = 0, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline, 4 = rectilinear
+  knots =  c(0,0.2,0.4,0.6,0.8,1.0,1.5,2,10)
 )
 
 # set up the pars
 if (tmb_data$hcr == 0) {
   tmb_pars <- list(par = rep(0.1, length(years)))
-}
-if (tmb_data$hcr == 1) {
+} else if (tmb_data$hcr == 1) {
   tmb_pars <- list(par = c(0.1, 0.1))
-}
-if (tmb_data$hcr == 2) {
-  tmb_pars <- list(par = rep(1, 3))
-}
-if (tmb_data$hcr == 3) {
-  tmb_pars <- list(par = rep(0.2, length(tmb_data$knots)))
+} else if (tmb_data$hcr == 2) {
+  tmb_pars <- list(par = rep(0.1, 3))
+} else if (tmb_data$hcr == 3) {
+  tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
+  #tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
+  #tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
+} else if (tmb_data$hcr == 4) {
+  tmb_pars <- list(par = c(0.02, 0.01, 0.1))
 }
 
 # set upper and lower bounds
@@ -118,16 +119,15 @@ if (tmb_data$hcr > 0) {
   lower <- rep(-Inf, length(tmb_pars$par))
   upper <- rep(Inf, length(tmb_pars$par))
 }
-
+if(tmb_data$hcr == 3){
+  lower <- rep(0, length(tmb_pars$par))
+  upper <- rep(Inf, length(tmb_pars$par))
+}
 # compile and load the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(dynlib("src/om_hcr"))
 obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-
-# obj$fn()
-# obj$gr()
-# obj$report()$`ut`
 
 # run om simulation
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -141,21 +141,29 @@ while (opt$convergence == 1) {
 opt
 
 sdreport(obj)
+
 opt$objective
 
-#------------------------------------------------------------------------------
-plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
-  obj$report(opt$par)$`vulb`,
-type = "p", xlim = c(0, 10),
-xlab = "vulnerable biomass", ylab = "TAC"
+dat <- data.frame("Ut" = obj$report()$`ut`, 
+                  "Vulb" = obj$report()$`vulb`, 
+                  "hcr" = tmb_data$hcrmode
 )
-points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
-  obj$report(opt$par)$`vulb`, col = "blue", type = "p")
+
+#------------------------------------------------------------------------------
+# plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
+#   obj$report(opt$par)$`vulb`,
+# type = "p", xlim = c(0, 10),
+# xlab = "vulnerable biomass", ylab = "TAC"
+# )
 
 plot(obj$report()$`ut` ~ obj$report()$`vulb`,
-  ylab = "Ut", xlab = "vulb",
-  main = paste0("objective = ", round(-opt$objective, 2))
+  ylab = "Ut", xlab = "vulb", pch = 16, cex = 0.5
+  #main = paste0("objective = ", round(-opt$objective, 2))
 )
+points(obj$report(opt$par)$`ut` ~ obj$report(opt$par)$`vulb`, col = "blue", 
+       type = "p", cex = 0.5, pch = 16)
+points(obj$report(opt$par)$`ut` ~ obj$report(opt$par)$`vulb`, col = "red", 
+       type = "p", cex = 0.5, pch = 16)
 
 
 plot(obj$report(opt$par)$`yield`, type = "b")

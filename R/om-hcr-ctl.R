@@ -58,7 +58,7 @@ ages <- 1:20
 cr <- 6
 vbk <- .23
 s <- .86
-rinit <- 10
+rinit <- 0.001
 ro <- 1.0
 uo <- 0.13
 asl <- 0.5
@@ -92,7 +92,7 @@ tmb_data <- list(
   recmult = sim$dat$recmult,
   objmode = 1, # 0 = MAY, 1 = utility
   hcrmode = 3, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline
-  knots = seq(from = 0, to = 0.75, length.out = 4)
+  knots = seq(from = 0, to = 10, length.out = 5)
 )
 
 # set up the pars
@@ -153,20 +153,19 @@ opt$objective
 #------------------------------------------------------------------------------
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
   obj$report(opt$par)$`vulb`,
-type = "b", xlim = c(0, 2),
-ylim = c(0, 0.5),
+type = "p", xlim = c(0, 10),
 xlab = "vulnerable biomass", ylab = "TAC"
 )
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
-  obj$report(opt$par)$`vulb`, col = "blue", type = "b")
+  obj$report(opt$par)$`vulb`, col = "blue", type = "p")
 
 plot(obj$report()$`ut` ~ obj$report()$`vulb`,
   ylab = "Ut", xlab = "vulb",
-  main = paste0("objective = ", round(-opt$objective, 2)),
-  ylim = c(0, 1)
+  main = paste0("objective = ", round(-opt$objective, 2))
 )
 
 
 plot(obj$report(opt$par)$`yield`, type = "b")
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, type = "b")
 points(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~ obj$report(opt$par)$`vulb`, col = "blue", type = "b")
+

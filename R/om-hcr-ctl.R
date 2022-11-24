@@ -143,13 +143,6 @@ opt
 sdreport(obj)
 opt$objective
 
-# bmin  0.2785293 when rinit = 10, cslope = 0.2108182
-# bmin 0.3486945 when rinit = 1, cslope = 0.2389048
-# bmin 0.2361415 when rinit = 0.1, clsope = 0.2038859
-# bmin 0.2458969 when rinit = 0.01, cslope = 0.2177752
-# bmin 0.2060114 when rinit = 0.001, cslope = 0.213996
-# bmin 0.2250819 when rinit = 0.0001, cslope = 0.2477414
-
 #------------------------------------------------------------------------------
 plot(obj$report(opt$par)$`ut` * obj$report(opt$par)$`vulb` ~
   obj$report(opt$par)$`vulb`,

@@ -64,8 +64,6 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (tmb_data$hcr == 3) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
-    # tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
-    # tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
   }
@@ -95,9 +93,11 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
   }
-
-  opt$SD <- sdreport(obj)
-
+  if(tmb_data$hcrmode == 0){
+    opt$SD <- NULL
+  } else {
+    opt$SD <- sdreport(obj)
+  }
   dat <- data.frame(
     "Ut" = obj$report()$`ut`,
     "Vulb" = obj$report()$`vulb`,
@@ -130,7 +130,6 @@ ahv <- 5
 pbig <- 0.05
 Rbig <- 7
 sdr <- 0.6
-ahv <- 5
 
 # testing recmult
 # years <- 1:2000
@@ -146,14 +145,14 @@ ahv <- 5
 #   theme_qfc()
 
 # simulate recruitment sequence
-set.seed(13)
+set.seed(3)
 sim <- get_recmult(pbig, Rbig, sdr)
-#opt = get_fit(hcrmode = 3, objmode = 0)
+# opt = get_fit(hcrmode = 0, objmode = 1)
 
 # estimate the hcr
 dat <- NULL
-for (i in 1:4) {
-  opt <- get_fit(hcrmode = i, objmode = 0)
+for (i in 0:4) {
+  opt <- get_fit(hcrmode = i, objmode = 1)
   if (is.null(dat)) {
     dat <- opt$dat
   } else {
@@ -161,6 +160,10 @@ for (i in 1:4) {
   }
 }
 summary(warnings())
+
+# extra code
+# tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
+# tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
 # plot(dat$Ut ~ dat$Vulb, xlim = c(0,5),
 #     ylab = "Ut", xlab = "vulb", pch = 16, cex = 0.5,
 #      col=as.factor(dat$hcr)
@@ -170,21 +173,30 @@ summary(warnings())
 library(tidyverse)
 library(ggqfc)
 
-p <- dat %>%
-  mutate(obj = max(obj) - obj) %>%
-  arrange(obj) %>%
+pd <- dat %>%
+  mutate(obj = obj/max(obj)) %>%
   mutate(Utility = as.factor(case_when(
-    hcr == "1" ~ paste0("linear = ", format(round(obj, 2), nsmall = 2)),
-    hcr == "2" ~ paste0("logistic = ", format(round(obj, 2), nsmall = 2)),
-    hcr == "3" ~ paste0("spline = ", format(round(obj, 2), nsmall = 2)),
-    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 2), nsmall = 2))
-  ))) %>%
+    hcr == "0" ~ paste0("OM = ", format(round(obj, 3), nsmall = 3)),
+    hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
+    hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
+    hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
+    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3))
+  ))) 
+my_levels = unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility,"\\(?[0-9,.]+\\)?"))))])
+pd$Utility = factor(pd$Utility, levels = my_levels)
+#pd$alpha <- ifelse(pd$hcr == 0, 1.0, 1.0)
+
+p <- 
+  pd %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
-  geom_point(size = 0.5) +
-  scale_color_brewer(palette = "Set1") +
+  geom_point(size = 0.75) +
+  scale_color_brewer(palette = "Paired") +
   ylab(expression(Exploitation ~ rate ~ U[t])) +
   xlab("Vulnerable biomass") +
   guides(color = guide_legend(reverse = TRUE)) +
   theme_qfc() +
-  guides(colour = guide_legend(override.aes = list(size = 3)))
+  theme(legend.position = c(.85, .85), 
+        legend.title.align=0.5) + 
+  guides(colour = guide_legend(override.aes = list(size = 3)))  + 
+  scale_alpha(guide = 'none')  
 p

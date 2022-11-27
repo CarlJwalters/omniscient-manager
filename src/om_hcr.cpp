@@ -1,4 +1,5 @@
 #include <TMB.hpp>
+
 /*
  * omniscient manager for highly variable recruitment
  *             cahill & walters oct 2022
@@ -8,7 +9,6 @@
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
-  // par(0) = ln(cslope), par(1) = ln(bmin)
   vector<Type> seq(2); 
   seq.setZero(); 
   seq(0) = 0; 
@@ -21,7 +21,6 @@ Type ut_linear(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_logistic(vector<Type> par, Type vulb)
 { 
-  // Umax = par(0); bslope = par(1); bhalf = par(3); 
   Type out = par(0) / (1 + exp(-par(1)*(vulb - par(2)))); 
   return out;
 }  
@@ -31,7 +30,7 @@ template <class Type>
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
 { 
   tmbutils::splinefun<Type> sp(knots,par);
-  Type out = sp(vulb);
+  Type out = sp(vulb);              
   return out;
 }
 
@@ -69,9 +68,9 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(upow);        // utility power
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
-  DATA_INTEGER(objmode);    // 0 = MAY, 1 = HARA utility
+  DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
   DATA_INTEGER(hcrmode);    // rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline, 4 = rectilinear
-  DATA_VECTOR(knots); 
+  DATA_VECTOR(knots);       // spline knots
 
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -93,11 +92,11 @@ Type objective_function<Type>::operator()()
       Lo(a) = 1;
       Lf(a) = 1; 
     }  
-    else if(a > 0 && a < (n_age - 1)){ // ages 2-19
+    else if(a > 0 && a < (n_age - 1)){
       Lo(a) = Lo(a-1)*s;
       Lf(a) = Lf(a-1)*s*(1 - vul(a-1)*uo);
     }
-    else if(a == (n_age - 1)){         // plus group age 20
+    else if(a == (n_age - 1)){          
       Lo(a) = Lo(a - 1)*s / (1 - s); 
       Lf(a) = Lf(a - 1)*s*(1 - vul(a-1)*uo) / (1 - s*(1 - vul(a-1)*uo)); 
     }

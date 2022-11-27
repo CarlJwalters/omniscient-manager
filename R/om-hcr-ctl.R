@@ -7,12 +7,8 @@ library(TMB)
 devtools::install_github("ChrisFishCahill/gg-qfc")
 library(ggqfc)
 library(tidyverse)
-library(ggtext)
-library(cowplot)
-library(ggpmisc)
 library(future)
 library(furrr)
-library(splines)
 # -----------------------------------------------------------
 get_recmult <- function(pbig, Rbig, sdr) {
   urand <- runif(n_year, 0, 1)
@@ -27,7 +23,7 @@ get_recmult <- function(pbig, Rbig, sdr) {
     }
     recmult[t] <- recmult[t] * exp(sdr * Nrand[t])
   }
-  out <- tibble(
+  out <- dplyr::tibble(
     year = 1:n_year,
     urand, Nrand, recmult
   )
@@ -54,7 +50,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     hcrmode = hcrmode, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline, 4 = rectilinear
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2, 10)
   )
-  
+
   # set up the pars
   if (tmb_data$hcr == 0) {
     tmb_pars <- list(par = rep(0.1, length(years)))
@@ -82,8 +78,9 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     upper <- rep(Inf, length(tmb_pars$par))
   }
   # load the cpp
-  dyn.load(dynlib("src/om_hcr"))
-  obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
+  dyn.load(TMB::dynlib("src/om_hcr"))
+  #openmp(max=TRUE)
+  obj <- TMB::MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 
   # run om simulation
   opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -93,7 +90,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
   }
-  if(tmb_data$hcrmode == 0){
+  if (tmb_data$hcrmode == 0) {
     opt$SD <- NULL
   } else {
     opt$SD <- sdreport(obj)
@@ -127,7 +124,7 @@ asl <- 0.5
 ahm <- 6
 upow <- 0.6
 ahv <- 5
-pbig <- 0.05
+pbig <- 1.0 # 0.01, 0.1, 0.25, 0.5, 0.75, 1.0
 Rbig <- 7
 sdr <- 0.6
 
@@ -147,9 +144,12 @@ sdr <- 0.6
 # simulate recruitment sequence
 set.seed(3)
 sim <- get_recmult(pbig, Rbig, sdr)
-# opt = get_fit(hcrmode = 0, objmode = 1)
 
+#system.time({
+#opt = get_fit(hcrmode = 0, objmode = 1)
+#})
 # estimate the hcr
+system.time({
 dat <- NULL
 for (i in 0:4) {
   opt <- get_fit(hcrmode = i, objmode = 1)
@@ -159,7 +159,23 @@ for (i in 0:4) {
     dat <- rbind(dat, opt$dat)
   }
 }
+})
 summary(warnings())
+
+# to_fit = tibble(hcrmode = 0:4, objmode = 1L)
+
+# set.seed(1)
+# system.time({
+# out <- purrr::pmap(to_fit, get_fit) # testing
+# })
+# 
+# future::plan(multisession)
+# system.time({
+#   out <- future_pmap(to_fit, get_fit,
+#                      .options = furrr_options(seed = TRUE),
+#                      .progress = TRUE
+#   )
+# })
 
 # extra code
 # tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
@@ -170,33 +186,42 @@ summary(warnings())
 #     #main = paste0("objective = ", round(-opt$objective, 2))
 # )
 
-library(tidyverse)
-library(ggqfc)
+dat %>%
+  filter(hcr == 1) %>%
+  mutate(year = 1:length(years)) %>%
+  ggplot(aes(x=years, y = Ut))+
+  geom_line()
 
 pd <- dat %>%
-  mutate(obj = obj/max(obj)) %>%
+  mutate(obj = obj / max(obj)) %>%
   mutate(Utility = as.factor(case_when(
     hcr == "0" ~ paste0("OM = ", format(round(obj, 3), nsmall = 3)),
     hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
     hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
     hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
     hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3))
-  ))) 
-my_levels = unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility,"\\(?[0-9,.]+\\)?"))))])
-pd$Utility = factor(pd$Utility, levels = my_levels)
-#pd$alpha <- ifelse(pd$hcr == 0, 1.0, 1.0)
+  )))
+my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
+pd$Utility <- factor(pd$Utility, levels = my_levels)
 
-p <- 
+p5 <-
   pd %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
-  geom_point(size = 0.75) +
+  geom_point(size = 0.25) +
   scale_color_brewer(palette = "Paired") +
   ylab(expression(Exploitation ~ rate ~ U[t])) +
   xlab("Vulnerable biomass") +
   guides(color = guide_legend(reverse = TRUE)) +
   theme_qfc() +
-  theme(legend.position = c(.85, .85), 
-        legend.title.align=0.5) + 
-  guides(colour = guide_legend(override.aes = list(size = 3)))  + 
-  scale_alpha(guide = 'none')  
-p
+  theme(
+    legend.position = c(.8, .75),
+    legend.title.align = 0.5
+  ) +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  scale_alpha(guide = "none") + 
+  ggtitle(bquote(P[big]~`=`~ .(pbig)))
+p5
+
+
+pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
+ggsave("plots/pbigs.pdf", width = 8, height = 10)

@@ -121,6 +121,8 @@ Type objective_function<Type>::operator()()
   
   n = ninit; 
   Type obj = 0;
+  //parallel_accumulator <Type> obj(this) ;
+  
   
   for(int t = 0; t < n_year; t++){
     if(t%100==0){n = ninit;}

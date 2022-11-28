@@ -2,6 +2,8 @@
 # Omniscient manager control aka open-loop optimization
 # Cahill and Walters Nov 2022
 # TODO: play with rbig
+#       dfo precautionary rule
+#       better plotting scheme
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -117,7 +119,7 @@ ahm <- 6
 upow <- 0.6
 ahv <- 5
 pbig <- 1
-Rbig <- 7
+Rbig <- 9
 sdr <- 0.6
 
 # testing recmult
@@ -142,7 +144,7 @@ sdr <- 0.6
 years <- 1:2000
 n_year <- length(years)
 set.seed(1)
-pbig <- 0.4 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
+pbig <- 1 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 system.time({
@@ -172,7 +174,7 @@ pd <- dat %>%
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)
-p4 <-
+p5 <-
   pd %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
   geom_point(size = 0.25) +
@@ -188,7 +190,7 @@ p4 <-
   guides(colour = guide_legend(override.aes = list(size = 3))) +
   scale_alpha(guide = "none") + 
   ggtitle(bquote(P[big]~`=`~ .(pd$Pbig)))
-p4
+p5
 
 pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
 ggsave("plots/pbigs.pdf", width = 8, height = 11)

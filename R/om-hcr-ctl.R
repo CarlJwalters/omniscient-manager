@@ -1,6 +1,7 @@
 # -----------------------------------------------------------
 # Omniscient manager control aka open-loop optimization
 # Cahill and Walters Nov 2022
+# TODO: play with rbig
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -23,7 +24,7 @@ get_recmult <- function(pbig, Rbig, sdr) {
     }
     recmult[t] <- recmult[t] * exp(sdr * Nrand[t])
   }
-  out <- dplyr::tibble(
+  out <- tibble(
     year = 1:n_year,
     urand, Nrand, recmult
   )
@@ -45,13 +46,11 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     ahm = ahm,
     upow = upow,
     ages = ages,
-    recmult = sim$dat$recmult,
-    objmode = objmode, # 0 = MAY, 1 = utility
-    hcrmode = hcrmode, # 0 = U(t), 1 = linear hcr, 2 = logistic hcr, 3 = spline, 4 = rectilinear
-    knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2, 10)
+    recmult = sim_dat$dat$recmult,
+    objmode = objmode,
+    hcrmode = hcrmode,
+    knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10)
   )
-
-  # set up the pars
   if (tmb_data$hcr == 0) {
     tmb_pars <- list(par = rep(0.1, length(years)))
   } else if (tmb_data$hcr == 1) {
@@ -60,11 +59,11 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (tmb_data$hcr == 3) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
+    #tmb_pars$par <- 0.2177 * (tmb_data$knots - 0.24) / (tmb_data$knots + 1e-10)
+    #tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
   }
-
-  # set upper and lower bounds
   if (tmb_data$hcr == 0) {
     lower <- rep(0, length(years))
     upper <- rep(1, length(years))
@@ -77,33 +76,26 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     lower <- rep(0, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
   }
-  # load the cpp
-  dyn.load(TMB::dynlib("src/om_hcr"))
-  #openmp(max=TRUE)
-  obj <- TMB::MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-
-  # run om simulation
+  if (!"om_hcr" %in% names(getLoadedDLLs())) {
+    dyn.load(TMB::dynlib("src/om_hcr"))
+  }
+  obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
   opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-
-  while (opt$convergence == 1) {
+  ctr <- 1
+  if (opt$convergence == 1 && ctr < 5) {
     tmb_pars <- list(par = opt$par)
     obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
+    ctr <- ctr + 1
   }
-  if (tmb_data$hcrmode == 0) {
-    opt$SD <- NULL
-  } else {
-    opt$SD <- sdreport(obj)
-  }
-  dat <- data.frame(
+  dat <- dplyr::tibble(
     "Ut" = obj$report()$`ut`,
     "Vulb" = obj$report()$`vulb`,
     "hcr" = tmb_data$hcrmode,
     "obj" = -opt$objective,
     "convergence" = opt$convergence
   )
-  opt$dat <- dat
-  opt
+  dat
 }
 
 # compile the cpp
@@ -124,7 +116,7 @@ asl <- 0.5
 ahm <- 6
 upow <- 0.6
 ahv <- 5
-pbig <- 1.0 # 0.01, 0.1, 0.25, 0.5, 0.75, 1.0
+pbig <- 1
 Rbig <- 7
 sdr <- 0.6
 
@@ -142,56 +134,33 @@ sdr <- 0.6
 #   theme_qfc()
 
 # simulate recruitment sequence
-set.seed(3)
-sim <- get_recmult(pbig, Rbig, sdr)
+# set.seed(333)
+# sim <- get_recmult(pbig, Rbig, sdr)
 
-#system.time({
-#opt = get_fit(hcrmode = 0, objmode = 1)
-#})
-# estimate the hcr
+#get_fit(hcrmode = 3, objmode = 1, pbig = 0.5, sim = 1, seed = 19)
+
+years <- 1:2000
+n_year <- length(years)
+set.seed(1)
+pbig <- 0.4 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
+sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
+
 system.time({
-dat <- NULL
-for (i in 0:4) {
-  opt <- get_fit(hcrmode = i, objmode = 1)
-  if (is.null(dat)) {
-    dat <- opt$dat
-  } else {
-    dat <- rbind(dat, opt$dat)
+  dat <- NULL
+  for (i in 0:4) {
+    opt <- get_fit(hcrmode = i, objmode = 1)
+    if (is.null(dat)) {
+      dat <- opt
+    } else {
+      dat <- rbind(dat, opt)
+    }
   }
-}
 })
+unique(dat$convergence)
 summary(warnings())
 
-# to_fit = tibble(hcrmode = 0:4, objmode = 1L)
 
-# set.seed(1)
-# system.time({
-# out <- purrr::pmap(to_fit, get_fit) # testing
-# })
-# 
-# future::plan(multisession)
-# system.time({
-#   out <- future_pmap(to_fit, get_fit,
-#                      .options = furrr_options(seed = TRUE),
-#                      .progress = TRUE
-#   )
-# })
-
-# extra code
-# tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
-# tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
-# plot(dat$Ut ~ dat$Vulb, xlim = c(0,5),
-#     ylab = "Ut", xlab = "vulb", pch = 16, cex = 0.5,
-#      col=as.factor(dat$hcr)
-#     #main = paste0("objective = ", round(-opt$objective, 2))
-# )
-
-dat %>%
-  filter(hcr == 1) %>%
-  mutate(year = 1:length(years)) %>%
-  ggplot(aes(x=years, y = Ut))+
-  geom_line()
-
+dat$Pbig <- pbig
 pd <- dat %>%
   mutate(obj = obj / max(obj)) %>%
   mutate(Utility = as.factor(case_when(
@@ -203,8 +172,7 @@ pd <- dat %>%
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)
-
-p5 <-
+p4 <-
   pd %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
   geom_point(size = 0.25) +
@@ -219,9 +187,92 @@ p5 <-
   ) +
   guides(colour = guide_legend(override.aes = list(size = 3))) +
   scale_alpha(guide = "none") + 
-  ggtitle(bquote(P[big]~`=`~ .(pbig)))
-p5
-
+  ggtitle(bquote(P[big]~`=`~ .(pd$Pbig)))
+p4
 
 pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
-ggsave("plots/pbigs.pdf", width = 8, height = 10)
+ggsave("plots/pbigs.pdf", width = 8, height = 11)
+
+
+
+
+#Extra code:
+
+
+# hcrmodes <- 0:4
+# objmodes <- 1
+# sdr <- 0.6
+# pbigs <- c(0.01, 0.5, 1.0)
+# sims <- 1
+# seed <- 1
+# to_fit <- expand.grid(hcrmodes, objmodes, pbigs, sims, seed)
+# names(to_fit) <- c("hcrmode", "objmode", "pbig", "sim", "seed")
+# to_fit <- to_fit %>% distinct()
+# system.time({
+#   out <- purrr::pmap_df(to_fit, get_fit)
+# })
+# 
+# future::plan(multisession)
+# system.time({
+#   out <- future_pmap_dfr(to_fit, get_fit,
+#     .options = furrr_options(seed = TRUE),
+#     .progress = TRUE
+#   )
+# })
+
+# extra code
+# tmb_pars$par <- 0.2177*(tmb_data$knots-0.24)/(tmb_data$knots+1e-10)
+# tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
+# plot(dat$Ut ~ dat$Vulb, xlim = c(0,5),
+#     ylab = "Ut", xlab = "vulb", pch = 16, cex = 0.5,
+#      col=as.factor(dat$hcr)
+#     #main = paste0("objective = ", round(-opt$objective, 2))
+# )
+#
+# dat %>%
+#   filter(hcr == 0) %>%
+#   mutate(year = 1:length(years)) %>%
+#   ggplot(aes(x=years, y = Ut))+
+#   geom_line()
+# out <- out %>% group_by(Pbig) %>%
+#   mutate(obj = obj / max(obj))
+# 
+# plot_list <- list()
+# for (i in unique(out$Pbig)) {
+#   pd <- out %>%
+#     filter(Pbig == i) %>%
+#     mutate(Utility = as.factor(case_when(
+#       hcr == "0" ~ paste0("OM = ", format(round(obj, 3), nsmall = 3)),
+#       hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
+#       hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
+#       hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
+#       hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3))
+#     )))
+#   my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
+#   pd$Utility <- factor(pd$Utility, levels = my_levels)
+#   p <-
+#     pd %>%
+#     ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
+#     geom_point(size = 0.25) +
+#     scale_color_brewer(palette = "Paired") +
+#     ylab(expression(Exploitation ~ rate ~ U[t])) +
+#     xlab("Vulnerable biomass") +
+#     guides(color = guide_legend(reverse = TRUE)) +
+#     theme_qfc() +
+#     theme(
+#       legend.position = c(.8, .75),
+#       legend.title.align = 0.5
+#     ) +
+#     guides(colour = guide_legend(override.aes = list(size = 3))) +
+#     scale_alpha(guide = "none") +
+#     ggtitle(bquote(P[big] ~ `=` ~ .(pd$Pbig)))
+#   plot_list[[which(unique(out$Pbig) == i)]] <- p
+# }
+# 
+# p1 <- plot_list[[1]]
+# p2 <- plot_list[[2]]
+# p3 <- plot_list[[3]]
+# p4 <- plot_list[[4]]
+# p5 <- plot_list[[5]]
+# p6 <- plot_list[[6]]
+# 

@@ -51,6 +51,23 @@ Type ut_rect(vector<Type> par, Type vulb)
   return out;
 }
 
+// DFO precautionary rule
+template <class Type> 
+Type ut_dfo(vector<Type> par, Type vulb)
+{ 
+  vector<Type> seq1(2); 
+  vector<Type> seq2(2); 
+  seq1.setZero(); seq2.setZero();  
+  
+  seq1(0) = 0; 
+  seq1(1) = par(0)*(vulb-par(1))/(par(2) - par(1)); 
+  seq2(0) = par(0); 
+  seq2(1) = max(seq1);
+  
+  Type out = min(seq2); 
+  return out;
+}
+
 template <class Type>
 Type objective_function<Type>::operator()()
 {

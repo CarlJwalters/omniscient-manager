@@ -53,6 +53,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     hcrmode = hcrmode,
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10)
   )
+  if(pbig > 0.4){tmb_data$knots = c(0, 1.0, 1.5, 2.0, 5.0, 10)}
   if (tmb_data$hcr == 0) {
     tmb_pars <- list(par = rep(0.1, length(years)))
   } else if (tmb_data$hcr == 1) {

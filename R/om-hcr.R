@@ -1,9 +1,8 @@
 # -----------------------------------------------------------
 # Omniscient manager control aka open-loop optimization
 # Cahill and Walters Nov 2022
-# TODO: play with rbig
-#       dfo precautionary rule
-#       better plotting scheme
+# TODO:  dfo precautionary rule
+#        better plotting scheme
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -53,7 +52,9 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     hcrmode = hcrmode,
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10)
   )
-  if(pbig > 0.4){tmb_data$knots = c(0, 1.0, 1.5, 2.0, 5.0, 10)}
+  if (pbig > 0.4) {
+    tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
+  }
   if (tmb_data$hcr == 0) {
     tmb_pars <- list(par = rep(0.1, length(years)))
   } else if (tmb_data$hcr == 1) {
@@ -62,8 +63,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (tmb_data$hcr == 3) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
-    #tmb_pars$par <- 0.2177 * (tmb_data$knots - 0.24) / (tmb_data$knots + 1e-10)
-    #tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
+    # tmb_pars$par <- 0.2177 * (tmb_data$knots - 0.24) / (tmb_data$knots + 1e-10)
+    # tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
   }
@@ -123,6 +124,63 @@ pbig <- 1
 Rbig <- 9
 sdr <- 0.6
 
+#-------------------------------------------------------------------------------
+# calculate Umsy and Umay for DFO rule
+
+ages <- 1:20
+s <- .86
+asl <- 0.5
+ahm <- 6
+ahv <- 5
+sdr <- 0.6
+vbk <- .23
+cr <- 6
+ro <- 1
+
+mat <- 1 / (1 + exp(-asl * (ages - ahm)))
+wt <- (1 - exp(-vbk * (ages)))^3
+vul <- 1 / (1 + exp(-asl * (ages - ahv)))
+
+Lo <- rep(NA, length(ages))
+Lo[1] <- 1
+
+for (a in 2:(length(ages) - 1)) {
+  Lo[a] <- Lo[a - 1] * s
+}
+# plus group
+Lo[length(ages)] <- Lo[length(ages) - 1] * s / (1 - s)
+
+mwt <- mat * wt
+sbro <- sum(Lo * mwt)
+reca <- cr / sbro
+recb <- (cr - 1) / (ro * sbro)
+ln_ar <- log(reca)
+
+Useq <- seq(from = 0.01, to = 1, length.out = 100)
+Umsy <- MSY <- 0
+
+for (i in 1:length(Useq)) {
+  Req <- Yeq <- sbrf <- ypr <- 0 
+  su <- 1
+  for(a in 1:length(ages)){
+    sbrf = sbrf + su*mwt[a] 
+    ypr = ypr + su*(1-Useq[i]*vul[a])*wt[a] 
+    su = su * Lo[a]*Useq[i]*vul[a] 
+  }
+  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # beverton-holt prediction
+  Yeq <- Req * ypr
+  if (Yeq > MSY) {
+    MSY <- Yeq
+    Umsy <- Useq[i]
+  }
+}
+
+MSY
+Umsy
+
+
+#-------------------------------------------------------------------------------
+
 # testing recmult
 # years <- 1:2000
 # n_year <- length(years)
@@ -140,12 +198,12 @@ sdr <- 0.6
 # set.seed(333)
 # sim <- get_recmult(pbig, Rbig, sdr)
 
-#get_fit(hcrmode = 3, objmode = 1, pbig = 0.5, sim = 1, seed = 19)
+# get_fit(hcrmode = 3, objmode = 1, pbig = 0.5, sim = 1, seed = 19)
 
 years <- 1:2000
 n_year <- length(years)
 set.seed(1)
-pbig <- 1 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
+pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 system.time({
@@ -189,8 +247,8 @@ p5 <-
     legend.title.align = 0.5
   ) +
   guides(colour = guide_legend(override.aes = list(size = 3))) +
-  scale_alpha(guide = "none") + 
-  ggtitle(bquote(P[big]~`=`~ .(pd$Pbig)))
+  scale_alpha(guide = "none") +
+  ggtitle(bquote(P[big] ~ `=` ~ .(pd$Pbig)))
 p5
 
 pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
@@ -199,7 +257,7 @@ ggsave("plots/pbigs.pdf", width = 8, height = 11)
 
 
 
-#Extra code:
+# Extra code:
 
 
 # hcrmodes <- 0:4
@@ -214,7 +272,7 @@ ggsave("plots/pbigs.pdf", width = 8, height = 11)
 # system.time({
 #   out <- purrr::pmap_df(to_fit, get_fit)
 # })
-# 
+#
 # future::plan(multisession)
 # system.time({
 #   out <- future_pmap_dfr(to_fit, get_fit,
@@ -239,7 +297,7 @@ ggsave("plots/pbigs.pdf", width = 8, height = 11)
 #   geom_line()
 # out <- out %>% group_by(Pbig) %>%
 #   mutate(obj = obj / max(obj))
-# 
+#
 # plot_list <- list()
 # for (i in unique(out$Pbig)) {
 #   pd <- out %>%
@@ -271,11 +329,11 @@ ggsave("plots/pbigs.pdf", width = 8, height = 11)
 #     ggtitle(bquote(P[big] ~ `=` ~ .(pd$Pbig)))
 #   plot_list[[which(unique(out$Pbig) == i)]] <- p
 # }
-# 
+#
 # p1 <- plot_list[[1]]
 # p2 <- plot_list[[2]]
 # p3 <- plot_list[[3]]
 # p4 <- plot_list[[4]]
 # p5 <- plot_list[[5]]
 # p6 <- plot_list[[6]]
-# 
+#

@@ -55,15 +55,11 @@ Type ut_rect(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_dfo(vector<Type> par, Type vulb)
 { 
+  //TODO
   vector<Type> seq1(2); 
   vector<Type> seq2(2); 
   seq1.setZero(); seq2.setZero();  
-  
-  seq1(0) = 0; 
-  seq1(1) = par(0)*(vulb-par(1))/(par(2) - par(1)); 
-  seq2(0) = par(0); 
   seq2(1) = max(seq1);
-  
   Type out = min(seq2); 
   return out;
 }
@@ -86,7 +82,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
-  DATA_INTEGER(hcrmode);    // rule 0 = U(t); 1 = linear; 2 = logistic; 3 = spline, 4 = rectilinear
+  DATA_INTEGER(hcrmode);    // options: 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rectilinear; 5 = dfo
   DATA_VECTOR(knots);       // spline knots
 
   vector<Type> n(n_age);
@@ -100,7 +96,6 @@ Type objective_function<Type>::operator()()
   n.setZero(); ninit.setZero(); vul.setZero(); wt.setZero(); mat.setZero();
   Lo.setZero(); mwt.setZero(); Lf.setZero(); Type sbro = 0;  
   
-  // set up leading vectors
   for(int a = 0; a < n_age; a ++){
     vul(a) = 1 /( 1 + exp(-asl*(ages(a) - ahv))); 
     wt(a) = pow((1 - exp(-vbk*(ages(a)))), 3); 
@@ -138,8 +133,6 @@ Type objective_function<Type>::operator()()
   
   n = ninit; 
   Type obj = 0;
-  //parallel_accumulator <Type> obj(this) ;
-  
   
   for(int t = 0; t < n_year; t++){
     if(t%100==0){n = ninit;}
@@ -169,7 +162,7 @@ Type objective_function<Type>::operator()()
       break;
       
       default:
-        std::cout<<"Ut code not yet implemented."<<std::endl;
+        std::cout<<"HCR code not yet implemented."<<std::endl;
       exit(EXIT_FAILURE);
       break;
     }

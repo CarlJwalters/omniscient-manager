@@ -125,18 +125,7 @@ Rbig <- 9
 sdr <- 0.6
 
 #-------------------------------------------------------------------------------
-# calculate Umsy and Umay for DFO rule
-
-ages <- 1:20
-s <- .86
-asl <- 0.5
-ahm <- 6
-ahv <- 5
-sdr <- 0.6
-vbk <- .23
-cr <- 6
-ro <- 1
-
+# equilibrium analysis to calculate Umsy and Umay for DFO rule
 mat <- 1 / (1 + exp(-asl * (ages - ahm)))
 wt <- (1 - exp(-vbk * (ages)))^3
 vul <- 1 / (1 + exp(-asl * (ages - ahv)))
@@ -147,6 +136,7 @@ Lo[1] <- 1
 for (a in 2:(length(ages) - 1)) {
   Lo[a] <- Lo[a - 1] * s
 }
+
 # plus group
 Lo[length(ages)] <- Lo[length(ages) - 1] * s / (1 - s)
 
@@ -170,20 +160,11 @@ for (i in 1:length(Useq)) {
   }
   Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
   Yeq <- Req * ypr
-  cat("\n")
-  print(paste0("iter = ", i))
-  print(paste0("U = ", Useq[i]))
-  print(paste0("ypr = ", ypr))
-  print(paste0("su = ", su))
-  print(paste0("sbrf = ", sbrf))
-  print(paste0("Req = ", Req))
-  print(paste0("Yeq = ", Yeq))
   if (Yeq > MSY) {
     MSY <- Yeq
     Umsy <- Useq[i]
   }
 }
-
 MSY
 Umsy
 

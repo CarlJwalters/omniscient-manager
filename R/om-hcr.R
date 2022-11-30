@@ -165,7 +165,7 @@ for (i in 1:length(Useq)) {
   for(a in 1:length(ages)){
     sbrf = sbrf + su*mwt[a] 
     ypr = ypr + su*(1-Useq[i]*vul[a])*wt[a] 
-    su = su * Lo[a]*Useq[i]*vul[a] 
+    su = su * (1-Useq[i]*vul[a])
   }
   Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # beverton-holt prediction
   Yeq <- Req * ypr

@@ -163,12 +163,21 @@ for (i in 1:length(Useq)) {
   Req <- Yeq <- sbrf <- ypr <- 0 
   su <- 1
   for(a in 1:length(ages)){
+    if(a==length(ages)){su=su/(1-s*(1-Useq[i]*vul[a]))} # plus group effect
     sbrf = sbrf + su*mwt[a] 
-    ypr = ypr + su*(1-Useq[i]*vul[a])*wt[a] 
-    su = su * (1-Useq[i]*vul[a])
+    ypr = ypr + su*Useq[i]*vul[a]*wt[a]
+    su = su * s * (1-Useq[i]*vul[a])
   }
-  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # beverton-holt prediction
+  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
   Yeq <- Req * ypr
+  cat("\n")
+  print(paste0("iter = ", i))
+  print(paste0("U = ", Useq[i]))
+  print(paste0("ypr = ", ypr))
+  print(paste0("su = ", su))
+  print(paste0("sbrf = ", sbrf))
+  print(paste0("Req = ", Req))
+  print(paste0("Yeq = ", Yeq))
   if (Yeq > MSY) {
     MSY <- Yeq
     Umsy <- Useq[i]

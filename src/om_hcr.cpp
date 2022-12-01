@@ -5,7 +5,7 @@
  *             cahill & walters oct 2022
  */
 
-// linear rule
+// linear 
 template <class Type> 
 Type ut_linear(vector<Type> par, Type vulb)
 { 
@@ -17,7 +17,7 @@ Type ut_linear(vector<Type> par, Type vulb)
   return out;
 }  
 
-// logistic rule
+// logistic 
 template <class Type> 
 Type ut_logistic(vector<Type> par, Type vulb)
 { 
@@ -25,7 +25,7 @@ Type ut_logistic(vector<Type> par, Type vulb)
   return out;
 }  
 
-// spline rule
+// spline 
 template <class Type> 
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
 { 
@@ -34,7 +34,7 @@ Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
   return out;
 }
 
-// rectilinear rule
+// rectilinear 
 template <class Type> 
 Type ut_rect(vector<Type> par, Type vulb)
 { 
@@ -51,7 +51,7 @@ Type ut_rect(vector<Type> par, Type vulb)
   return out;
 }
 
-// DFO precautionary rule
+// canada rule 
 template <class Type> 
 Type ut_dfo(vector<Type> par, Type vulb)
 { 
@@ -64,11 +64,11 @@ Type ut_dfo(vector<Type> par, Type vulb)
   return out;
 }
 
-// cahill rule
+// double logistic
 template <class Type> 
-Type ut_cahill(vector<Type> par, Type abar, Type wbar, Type vulb)
+Type ut_db_logistic(vector<Type> par, Type wbar, Type vulb)
 { 
-  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar + par(3)*abar + par(4)*abar*wbar*vulb);               
+  Type out = par(0) / ((1 + exp(-par(1)*(vulb - par(2))))*(1 + exp(-par(3)*(wbar-par(4)))));      
   return out;
 }  
 
@@ -177,7 +177,7 @@ Type objective_function<Type>::operator()()
       break;
       
       case 6:
-        ut(t) = ut_cahill(par, abar(t), wbar(t), vulb(t));
+        ut(t) = ut_db_logistic(par, wbar(t), vulb(t));
       break;
       
       default:

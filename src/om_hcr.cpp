@@ -55,7 +55,7 @@ Type ut_rect(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_dfo(vector<Type> par, Type vulb)
 { 
-  //TODO
+  //TODO--NOT YET WORKING
   vector<Type> seq1(2); 
   vector<Type> seq2(2); 
   seq1.setZero(); seq2.setZero();  
@@ -63,6 +63,14 @@ Type ut_dfo(vector<Type> par, Type vulb)
   Type out = min(seq2); 
   return out;
 }
+
+// cahill rule
+template <class Type> 
+Type ut_cahill(vector<Type> par, Type abar, Type wbar, Type vulb)
+{ 
+  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar*vulb + par(3)*abar);               
+  return out;
+}  
 
 template <class Type>
 Type objective_function<Type>::operator()()
@@ -82,7 +90,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
-  DATA_INTEGER(hcrmode);    // options: 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rectilinear; 5 = dfo
+  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dfo; 6 = cahill 
   DATA_VECTOR(knots);       // spline knots
 
   vector<Type> n(n_age);
@@ -123,13 +131,15 @@ Type objective_function<Type>::operator()()
   PARAMETER_VECTOR(par); 
   
   vector<Type> abar(n_year);
+  vector<Type> wbar(n_year);
   vector<Type> yield(n_year);
   vector<Type> utility(n_year);
   vector<Type> ssb(n_year);
   vector<Type> vulb(n_year);
   vector<Type> ut(n_year);
-  abar.setZero(); yield.setZero(); utility.setZero();
-  ssb.setZero(); vulb.setZero(); ut.setZero(); 
+  abar.setZero();wbar.setZero(); yield.setZero(); 
+  utility.setZero(); ssb.setZero(); vulb.setZero(); 
+  ut.setZero(); 
   
   n = ninit; 
   Type obj = 0;
@@ -139,6 +149,7 @@ Type objective_function<Type>::operator()()
     vulb(t) = (vul*n*wt).sum();                                    
     ssb(t) = (mwt*n).sum();                                        
     abar(t) = (ages*n).sum() / sum(n);                             
+    wbar(t) = (n*wt).sum() / sum(n); 
     
     switch(hcrmode){
       case 0:
@@ -159,6 +170,14 @@ Type objective_function<Type>::operator()()
 
       case 4:
         ut(t) = ut_rect(par, vulb(t));
+      break;
+      
+      case 5:
+        ut(t) = ut_dfo(par, vulb(t));
+      break;
+      
+      case 6:
+        ut(t) = ut_cahill(par, abar(t), wbar(t), vulb(t));
       break;
       
       default:
@@ -194,6 +213,7 @@ Type objective_function<Type>::operator()()
   REPORT(yield);
   REPORT(vulb);
   REPORT(abar);
+  REPORT(wbar); 
   REPORT(utility);
   REPORT(ut); 
 

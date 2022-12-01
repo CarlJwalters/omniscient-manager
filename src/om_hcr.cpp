@@ -68,7 +68,7 @@ Type ut_dfo(vector<Type> par, Type vulb)
 template <class Type> 
 Type ut_cahill(vector<Type> par, Type abar, Type wbar, Type vulb)
 { 
-  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar*vulb + par(3)*abar);               
+  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar + par(3)*abar + par(4)*abar*wbar*vulb);               
   return out;
 }  
 

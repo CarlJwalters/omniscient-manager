@@ -63,10 +63,10 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (tmb_data$hcr == 3) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
-    # tmb_pars$par <- 0.2177 * (tmb_data$knots - 0.24) / (tmb_data$knots + 1e-10)
-    # tmb_pars$par <- ifelse(tmb_pars$par < 0, 0.02, tmb_pars$par)
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
+  } else if (tmb_data$hcr == 6) {
+    tmb_pars <- list(par = c(0.1, 0.1, 0.1, 0.1))
   }
   if (tmb_data$hcr == 0) {
     lower <- rep(0, length(years))
@@ -158,8 +158,18 @@ for (i in 1:length(Useq)) {
     ypr = ypr + su*Useq[i]*vul[a]*wt[a]
     su = su * s * (1-Useq[i]*vul[a])
   }
-  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
+  #Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
+  Req = ( exp(ln_ar)*sbrf-1.0 ) / (recb*sbrf)
   Yeq <- Req * ypr
+  cat("\n")
+  print(paste0("iter = ", i))
+  print(paste0("U = ", Useq[i]))
+  print(paste0("ypr = ", ypr))
+  print(paste0("su = ", su))
+  print(paste0("sbrf = ", sbrf))
+  print(paste0("Req = ", Req))
+  print(paste0("Yeq = ", Yeq))
+  
   if (Yeq > MSY) {
     MSY <- Yeq
     Umsy <- Useq[i]

@@ -53,14 +53,18 @@ Type ut_rect(vector<Type> par, Type vulb)
 
 // canada rule 
 template <class Type> 
-Type ut_dfo(vector<Type> par, Type vulb)
+Type ut_dfo(vector<Type> dfopar, Type vulb)
 { 
-  //TODO--NOT YET WORKING
-  vector<Type> seq1(2); 
-  vector<Type> seq2(2); 
-  seq1.setZero(); seq2.setZero();  
-  seq2(1) = max(seq1);
-  Type out = min(seq2); 
+  //dfopar(0) = Umsy, dfopar(1) = Bmsy
+  // NOTE: Umsy and Bmsy read in as data and not fitted
+  Type Umsy = dfopar(0);
+  Type Bmsy = dfopar(1);
+  Type blrp = 0.4*Bmsy; 
+  Type ulrp = 0.8*Bmsy; 
+
+  Type out = Bmsy * (vulb - blrp) / (ulrp - blrp); 
+  if (out < 0){out = 0;}
+  if (out > Umsy){out = Umsy;}
   return out;
 }
 
@@ -90,7 +94,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
-  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dfo; 6 = cahill 
+  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dfo; 6 = dbl logistic 
   DATA_VECTOR(knots);       // spline knots
 
   vector<Type> n(n_age);
@@ -103,7 +107,7 @@ Type objective_function<Type>::operator()()
   vector<Type> Lf(n_age);
   n.setZero(); ninit.setZero(); vul.setZero(); wt.setZero(); mat.setZero();
   Lo.setZero(); mwt.setZero(); Lf.setZero(); Type sbro = 0;  
-  
+
   for(int a = 0; a < n_age; a ++){
     vul(a) = 1 /( 1 + exp(-asl*(ages(a) - ahv))); 
     wt(a) = pow((1 - exp(-vbk*(ages(a)))), 3); 
@@ -121,7 +125,7 @@ Type objective_function<Type>::operator()()
       Lf(a) = Lf(a - 1)*s*(1 - vul(a-1)*uo) / (1 - s*(1 - vul(a-1)*uo)); 
     }
   } 
-  
+
   ninit = rinit*Lf; 
   mwt = mat*wt; 
   sbro = (Lo*mwt).sum(); 

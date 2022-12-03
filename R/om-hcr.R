@@ -1,8 +1,7 @@
 # -----------------------------------------------------------
 # Omniscient manager control aka open-loop optimization
-# Cahill and Walters Nov 2022
-# TODO:  dfo precautionary rule
-#        better plotting scheme
+# Cahill and Walters Fall 2022
+# TODO: better plotting scheme
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -11,6 +10,7 @@ library(ggqfc)
 library(tidyverse)
 library(future)
 library(furrr)
+
 # -----------------------------------------------------------
 get_recmult <- function(pbig, Rbig, sdr) {
   urand <- runif(n_year, 0, 1)
@@ -32,6 +32,19 @@ get_recmult <- function(pbig, Rbig, sdr) {
   list(dat = out)
 }
 
+# testing recmult
+# years <- 1:2000
+# n_year <- length(years)
+# pbig <- 0.05
+# Rbig <- 10
+# sdr <- 0.4
+# set.seed(1)
+# sim <- get_recmult(pbig = 0.02, Rbig, sdr)
+# sim$dat %>%
+#   ggplot(aes(x = year, y = recmult)) +
+#   geom_line() +
+#   theme_qfc()
+
 get_fit <- function(hcrmode = NA, objmode = NA) {
   tmb_data <- list(
     n_year = length(years),
@@ -50,7 +63,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     recmult = sim_dat$dat$recmult,
     objmode = objmode,
     hcrmode = hcrmode,
-    knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10)
+    knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
+    dfopar = c(Umsy, Bmsy)
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -66,7 +80,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
   } else if (tmb_data$hcr == 6) {
-    tmb_pars <- list(par = c(0.1, 0.1, 0.1, 0.1))
+    tmb_pars <- list(par = rep(0.1, 5))
   }
   if (tmb_data$hcr == 0) {
     lower <- rep(0, length(years))
@@ -84,28 +98,31 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     dyn.load(TMB::dynlib("src/om_hcr"))
   }
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-  opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-  ctr <- 1
-  if (opt$convergence == 1 && ctr < 5) {
-    tmb_pars <- list(par = opt$par)
-    obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
+  if (hcrmode < 6) {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-    ctr <- ctr + 1
+    ctr <- 1
+    if (opt$convergence == 1 && ctr < 5) {
+      tmb_pars <- list(par = opt$par)
+      obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
+      opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
+      ctr <- ctr + 1
+    }
+    objective <- -opt$objective
+    convergence <- opt$convergence
   }
   dat <- dplyr::tibble(
     "Ut" = obj$report()$`ut`,
     "Vulb" = obj$report()$`vulb`,
+    "Abar" = obj$report()$`abar`,
+    "Wbar" = obj$report()$`wbar`,
     "hcr" = tmb_data$hcrmode,
-    "obj" = -opt$objective,
-    "convergence" = opt$convergence
+    "obj" = ifelse(hcrmode < 6, objective, -obj$fn()),
+    "convergence" = ifelse(hcrmode < 6, convergence, 0)
   )
   dat
 }
 
-# compile the cpp
-cppfile <- "src/om_hcr.cpp"
-compile(cppfile)
-
+#-------------------------------------------------------------------------------
 # leading parameters/values for simulation
 years <- 1:2000
 n_year <- length(years)
@@ -125,7 +142,8 @@ Rbig <- 9
 sdr <- 0.6
 
 #-------------------------------------------------------------------------------
-# equilibrium analysis to calculate Umsy and Umay for DFO rule
+# now that we have starting parameters, run equilibrium analysis to calculate
+# Umsy and Bmsy for DFO rule
 mat <- 1 / (1 + exp(-asl * (ages - ahm)))
 wt <- (1 - exp(-vbk * (ages)))^3
 vul <- 1 / (1 + exp(-asl * (ages - ahv)))
@@ -147,64 +165,73 @@ recb <- (cr - 1) / (ro * sbro)
 ln_ar <- log(reca)
 
 Useq <- seq(from = 0.01, to = 1, length.out = 100)
-Umsy <- MSY <- 0
+Umsy <- Bmsy <- 0
 
 for (i in 1:length(Useq)) {
-  Req <- Yeq <- sbrf <- ypr <- 0 
+  Req <- Yeq <- sbrf <- ypr <- 0
   su <- 1
-  for(a in 1:length(ages)){
-    if(a==length(ages)){su=su/(1-s*(1-Useq[i]*vul[a]))} # plus group effect
-    sbrf = sbrf + su*mwt[a] 
-    ypr = ypr + su*Useq[i]*vul[a]*wt[a]
-    su = su * s * (1-Useq[i]*vul[a])
+  for (a in 1:length(ages)) {
+    if (a == length(ages)) {
+      su <- su / (1 - s * (1 - Useq[i] * vul[a]))
+    } # plus group effect
+    sbrf <- sbrf + su * mwt[a]
+    ypr <- ypr + su * Useq[i] * vul[a] * wt[a]
+    su <- su * s * (1 - Useq[i] * vul[a])
   }
-  #Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
-  Req = ( exp(ln_ar)*sbrf-1.0 ) / (recb*sbrf)
+  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
   Yeq <- Req * ypr
-  cat("\n")
-  print(paste0("iter = ", i))
-  print(paste0("U = ", Useq[i]))
-  print(paste0("ypr = ", ypr))
-  print(paste0("su = ", su))
-  print(paste0("sbrf = ", sbrf))
-  print(paste0("Req = ", Req))
-  print(paste0("Yeq = ", Yeq))
-  
-  if (Yeq > MSY) {
-    MSY <- Yeq
+  if (Yeq > Bmsy) {
+    Bmsy <- Yeq
     Umsy <- Useq[i]
   }
 }
-MSY
+Bmsy
 Umsy
 
-
 #-------------------------------------------------------------------------------
-
-# testing recmult
-# years <- 1:2000
-# n_year <- length(years)
-# pbig <- 0.05
-# Rbig <- 10
-# sdr <- 0.4
-# set.seed(1)
-# sim <- get_recmult(pbig = 0.02, Rbig, sdr)
-# sim$dat %>%
-#   ggplot(aes(x = year, y = recmult)) +
-#   geom_line() +
-#   theme_qfc()
-
-# simulate recruitment sequence
-# set.seed(333)
-# sim <- get_recmult(pbig, Rbig, sdr)
-
-# get_fit(hcrmode = 3, objmode = 1, pbig = 0.5, sim = 1, seed = 19)
+# compile the cpp
+cppfile <- "src/om_hcr.cpp"
+compile(cppfile)
+dyn.load(TMB::dynlib("src/om_hcr"))
 
 years <- 1:2000
 n_year <- length(years)
 set.seed(1)
 pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
+
+opt <- get_fit(hcrmode = 6, objmode = 1)
+plot(opt$Ut ~ opt$Vulb, 
+     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule")
+
+plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
+
+my_dat <- data.frame(Ut = opt$Ut, Vulb = opt$Vulb, Wbar = opt$Wbar)
+
+p <-
+  my_dat %>%
+  ggplot(aes(x = Vulb, y = Wbar)) +
+  geom_point(shape = 21, aes(fill = Ut)) +
+  scale_fill_gradient(low = "white", high = "black") +
+  # scale_colour_gradient(low = "blue", high = "darkorange2") +
+  theme_qfc()
+p
+
+p1 <-
+  my_dat %>%
+  ggplot(aes(x = Vulb, y = Ut)) +
+  geom_point(color = "black") +
+  theme_qfc()
+p1
+
+p2 <-
+  my_dat %>%
+  ggplot(aes(x = Wbar, y = Ut)) +
+  geom_point(color = "black") +
+  theme_qfc()
+p2
+
+bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 
 system.time({
   dat <- NULL

@@ -51,23 +51,6 @@ Type ut_rect(vector<Type> par, Type vulb)
   return out;
 }
 
-// canada rule 
-template <class Type> 
-Type ut_dfo(vector<Type> dfopar, Type vulb)
-{ 
-  //dfopar(0) = Umsy, dfopar(1) = Bmsy
-  // NOTE: Umsy and Bmsy read in as data and not fitted
-  Type Umsy = dfopar(0);
-  Type Bmsy = dfopar(1);
-  Type blrp = 0.4*Bmsy; 
-  Type ulrp = 0.8*Bmsy; 
-
-  Type out = Bmsy * (vulb - blrp) / (ulrp - blrp); 
-  if (out < 0){out = 0;}
-  if (out > Umsy){out = Umsy;}
-  return out;
-}
-
 // double logistic
 template <class Type> 
 Type ut_db_logistic(vector<Type> par, Type wbar, Type vulb)
@@ -75,6 +58,20 @@ Type ut_db_logistic(vector<Type> par, Type wbar, Type vulb)
   Type out = par(0) / ((1 + exp(-par(1)*(vulb - par(2))))*(1 + exp(-par(3)*(wbar-par(4)))));      
   return out;
 }  
+
+// canada rule -- note dfopar read in as data
+template <class Type> 
+Type ut_dfo(vector<Type> dfopar, Type vulb)
+{ 
+  Type Umsy = dfopar(0);
+  Type Bmsy = dfopar(1);
+  Type blrp = 0.4*Bmsy; 
+  Type ulrp = 0.8*Bmsy; 
+  Type out = Umsy * (vulb - blrp) / (ulrp - blrp); 
+  if (out < 0){out = 0;}
+  if (out > Umsy){out = Umsy;}
+  return out;
+}
 
 template <class Type>
 Type objective_function<Type>::operator()()
@@ -94,8 +91,9 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
   DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
-  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dfo; 6 = dbl logistic 
+  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dbl logistic; 6 = dfo
   DATA_VECTOR(knots);       // spline knots
+  DATA_VECTOR(dfopar);      // Umsy, Bmsy
 
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -177,11 +175,11 @@ Type objective_function<Type>::operator()()
       break;
       
       case 5:
-        ut(t) = ut_dfo(par, vulb(t));
+        ut(t) = ut_db_logistic(par, wbar(t), vulb(t));
       break;
       
       case 6:
-        ut(t) = ut_db_logistic(par, wbar(t), vulb(t));
+        ut(t) = ut_dfo(dfopar, vulb(t));
       break;
       
       default:

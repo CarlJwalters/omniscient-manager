@@ -200,7 +200,7 @@ set.seed(1)
 pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 6, objmode = 1)
+opt <- get_fit(hcrmode = 5, objmode = 1)
 plot(opt$Ut ~ opt$Vulb, 
      xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule", 
      xlim = c(0,0.5))
@@ -265,6 +265,7 @@ my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(
 pd$Utility <- factor(pd$Utility, levels = my_levels)
 p5 <-
   pd %>%
+  filter(hcr != 5) %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
   geom_point(size = 0.25) +
   scale_color_brewer(palette = "Paired") +

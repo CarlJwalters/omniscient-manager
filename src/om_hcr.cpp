@@ -1,8 +1,9 @@
 #include <TMB.hpp>
 
 /*
- * omniscient manager for highly variable recruitment
- *             cahill & walters oct 2022
+ * estimating harvest control rules for fisheries w/ 
+ *    highly variable recruitment dynamics
+ *          cahill & walters oct 2022
  */
 
 // linear 
@@ -145,13 +146,13 @@ Type objective_function<Type>::operator()()
   
   n = ninit; 
   Type obj = 0;
-  
+
   for(int t = 0; t < n_year; t++){
     if(t%100==0){n = ninit;}
     vulb(t) = (vul*n*wt).sum();                                    
-    ssb(t) = (mwt*n).sum();                                        
+    ssb(t) = (mwt*n).sum();                                          
     abar(t) = (ages*n).sum() / sum(n);                             
-    wbar(t) = (n*wt).sum() / sum(n); 
+    wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
     
     switch(hcrmode){
       case 0:

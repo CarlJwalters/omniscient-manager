@@ -79,7 +79,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
-  } else if (tmb_data$hcr == 6) {
+  } else if (tmb_data$hcr >= 5) {
     tmb_pars <- list(par = rep(0.1, 5))
   }
   if (tmb_data$hcr == 0) {
@@ -202,7 +202,8 @@ sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 opt <- get_fit(hcrmode = 6, objmode = 1)
 plot(opt$Ut ~ opt$Vulb, 
-     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule")
+     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule", 
+     xlim = c(0,0.5))
 
 plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
 
@@ -235,7 +236,7 @@ bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 
 system.time({
   dat <- NULL
-  for (i in 0:4) {
+  for (i in 0:6) {
     opt <- get_fit(hcrmode = i, objmode = 1)
     if (is.null(dat)) {
       dat <- opt
@@ -256,7 +257,9 @@ pd <- dat %>%
     hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
     hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
     hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3))
+    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3)), 
+    hcr == "5" ~ paste0("double logistic = ", format(round(obj, 3), nsmall = 3)),
+    hcr == "6" ~ paste0("DFO = ", format(round(obj, 3), nsmall = 3))
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)

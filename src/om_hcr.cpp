@@ -1,9 +1,9 @@
 #include <TMB.hpp>
 
 /*
- * estimating harvest control rules for fisheries w/ 
+ * Estimating feedback policies for fisheries w/ 
  *    highly variable recruitment dynamics
- *          cahill & walters oct 2022
+ *         cahill & walters oct 2022
  */
 
 // linear 

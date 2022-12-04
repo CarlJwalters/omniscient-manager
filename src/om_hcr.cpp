@@ -1,9 +1,9 @@
 #include <TMB.hpp>
 
 /*
- * Estimating feedback policies for fisheries w/ 
- *    highly variable recruitment dynamics
- *         cahill & walters oct 2022
+ * Estimating good feedback policies for fisheries w/ 
+ *      highly variable recruitment dynamics
+ *           cahill & walters oct 2022
  */
 
 // linear 

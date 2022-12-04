@@ -172,7 +172,7 @@ recb <- (cr - 1) / (ro * sbro)
 ln_ar <- log(reca)
 
 Useq <- seq(from = 0.01, to = 1, length.out = 100)
-Umsy <- Bmsy <- 0
+Umsy <- msy <- 0
 
 for (i in 1:length(Useq)) {
   Req <- Yeq <- sbrf <- ypr <- 0
@@ -187,9 +187,10 @@ for (i in 1:length(Useq)) {
   }
   Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
   Yeq <- Req * ypr
-  if (Yeq > Bmsy) {
-    Bmsy <- Yeq
+  if (Yeq > msy) {
+    msy <- Yeq
     Umsy <- Useq[i]
+    Bmsy <- msy/Umsy
   }
 }
 Bmsy
@@ -207,7 +208,7 @@ set.seed(1)
 pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 2, objmode = 0)
+opt <- get_fit(hcrmode = 4, objmode = 1)
 plot(opt$Ut ~ opt$Vulb, 
      xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule")
 

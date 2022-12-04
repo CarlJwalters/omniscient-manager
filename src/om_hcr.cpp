@@ -3,7 +3,7 @@
 /*
  * Estimating and comparing feedback policy performance in fisheries w/ 
  *                 highly variable recruitment dynamics
- *                      cahill & walters oct 2022
+ *                       cahill & walters oct 2022
  */
 
 // linear 

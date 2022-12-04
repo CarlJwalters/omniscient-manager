@@ -1,7 +1,14 @@
 # -----------------------------------------------------------
-# Omniscient manager control aka open-loop optimization
-# Cahill and Walters Fall 2022
-# TODO: better plotting scheme
+# Estimating good feedback policies for fisheries with highly
+#                variable recruitment dynamics
+#                 Cahill and Walters Fall 2022
+# 
+#                  TODO: 
+#       better plotting scheme
+#       read Reinforcement Learning stuff
+#       set up cross validation schemes
+#       think about other features to pull in to predicting Ut
+# 
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -200,10 +207,9 @@ set.seed(1)
 pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 5, objmode = 1)
+opt <- get_fit(hcrmode = 2, objmode = 0)
 plot(opt$Ut ~ opt$Vulb, 
-     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule", 
-     xlim = c(0,0.5))
+     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule")
 
 plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
 

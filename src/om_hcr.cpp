@@ -153,7 +153,6 @@ Type objective_function<Type>::operator()()
     ssb(t) = (mwt*n).sum();                                          
     abar(t) = (ages*n).sum() / sum(n);                             
     wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
-    
     switch(hcrmode){
       case 0:
         ut(t) = par(t);
@@ -188,28 +187,28 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
+  }
+  
+  
+  switch(objmode){
+    case 0:
+      obj -= yield.sum()/n_year;
+    break;
     
-    switch(objmode){
-      case 0:
-        obj -= yield(t);
-      break;
-      
-      case 1:
-        obj -= utility(t);
-      break;
-      
-      default:
-        std::cout<<"Objective code not yet implemented."<<std::endl;
-      exit(EXIT_FAILURE);
-      break;
-    }
+    case 1:
+      obj -= utility.sum()/n_year;
+    break;
+    
+    default:
+      std::cout<<"Objective code not yet implemented."<<std::endl;
+    exit(EXIT_FAILURE);
+    break;
   }
   
   REPORT(ssb);

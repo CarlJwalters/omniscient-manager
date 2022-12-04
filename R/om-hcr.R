@@ -1,7 +1,7 @@
 # -----------------------------------------------------------
-# Estimating good feedback policies for fisheries with highly
+# Exploring feedback policy performance for fisheries with highly
 #                variable recruitment dynamics
-#                 Cahill and Walters Fall 2022
+#                Cahill and Walters Fall 2022
 # 
 #                  TODO: 
 #       better plotting scheme

@@ -208,9 +208,9 @@ set.seed(1)
 pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 4, objmode = 1)
+opt <- get_fit(hcrmode = 6, objmode = 1)
 plot(opt$Ut ~ opt$Vulb, 
-     xlab = "vulnerable biomass", ylab = "ut", main = "DFO rule")
+     xlab = "vulnerable biomass", ylab = "ut")
 
 plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
 
@@ -244,7 +244,7 @@ bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 system.time({
   dat <- NULL
   for (i in 0:6) {
-    opt <- get_fit(hcrmode = i, objmode = 1)
+    opt <- get_fit(hcrmode = i, objmode = 0)
     if (is.null(dat)) {
       dat <- opt
     } else {

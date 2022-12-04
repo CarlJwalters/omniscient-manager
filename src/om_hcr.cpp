@@ -148,7 +148,7 @@ Type objective_function<Type>::operator()()
   Type obj = 0;
 
   for(int t = 0; t < n_year; t++){
-    if(t%100==0){n = ninit;}
+    if(t%100==0){n = rinit*n;}
     vulb(t) = (vul*n*wt).sum();                                    
     ssb(t) = (mwt*n).sum();                                          
     abar(t) = (ages*n).sum() / sum(n);                             

@@ -195,7 +195,6 @@ Type objective_function<Type>::operator()()
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
   }
   
-  
   switch(objmode){
     case 0:
       obj -= yield.sum()/n_year;

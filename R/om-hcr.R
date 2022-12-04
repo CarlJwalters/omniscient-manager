@@ -1,6 +1,5 @@
 # -----------------------------------------------------------
-# Estimating feedback policy performance for fisheries with highly
-#                variable recruitment dynamics
+# Suboptimal feedback policies for fisheries with highly variable recruitment dynamics
 #                Cahill and Walters Fall 2022
 # 
 #                  TODO: 

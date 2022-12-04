@@ -1,9 +1,8 @@
 #include <TMB.hpp>
 
 /*
- * Estimating and comparing feedback policy performance in fisheries w/ 
- *                 highly variable recruitment dynamics
- *                       cahill & walters oct 2022
+ * Suboptimal feedback policies for fisheries w/ highly variable recruitment dynamics
+ *                             cahill & walters oct 2022
  */
 
 // linear 

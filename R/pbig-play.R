@@ -1,4 +1,4 @@
-pbig <- 0.25 # play with this variable 
+pbig <- 0.05 # play with this variable 
 
 years <- 1:2000
 n_year <- length(years)

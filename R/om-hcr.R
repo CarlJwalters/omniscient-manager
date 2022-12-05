@@ -239,11 +239,12 @@ p2 <-
 p2
 
 bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
+sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 system.time({
   dat <- NULL
   for (i in 0:6) {
-    opt <- get_fit(hcrmode = i, objmode = 0)
+    opt <- get_fit(hcrmode = i, objmode = 1)
     if (is.null(dat)) {
       dat <- opt
     } else {
@@ -252,6 +253,7 @@ system.time({
   }
 })
 unique(dat$convergence)
+unique(dat$hcr[which(dat$convergence==1)])
 summary(warnings())
 
 

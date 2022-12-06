@@ -1,13 +1,13 @@
 # -----------------------------------------------------------
 # Suboptimal feedback policies for fisheries with highly variable recruitment dynamics
 #                Cahill and Walters Fall 2022
-# 
-#                  TODO: 
+#
+#                  TODO:
 #       better plotting scheme
 #       read Reinforcement Learning stuff
 #       set up cross validation schemes
 #       think about other features to pull in to predicting Ut
-# 
+#
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -85,8 +85,10 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
-  } else if (tmb_data$hcr >= 5) {
+  } else if (tmb_data$hcr == 5) {
     tmb_pars <- list(par = rep(0.1, 5))
+  } else if (tmb_data$hcr == 6) {
+    tmb_pars <- list(par = rep(0.1, 3))
   }
   if (tmb_data$hcr == 0) {
     lower <- rep(0, length(years))
@@ -104,7 +106,7 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     dyn.load(TMB::dynlib("src/om_hcr"))
   }
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-  if (hcrmode < 6) {
+  if (hcrmode < 7) {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
     ctr <- 1
     if (opt$convergence == 1 && ctr < 5) {
@@ -189,7 +191,7 @@ for (i in 1:length(Useq)) {
   if (Yeq > msy) {
     msy <- Yeq
     Umsy <- Useq[i]
-    Bmsy <- msy/Umsy
+    Bmsy <- msy / Umsy
   }
 }
 Bmsy
@@ -208,8 +210,10 @@ pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 opt <- get_fit(hcrmode = 6, objmode = 1)
-plot(opt$Ut ~ opt$Vulb, 
-     xlab = "vulnerable biomass", ylab = "ut")
+
+plot(opt$Ut ~ opt$Vulb,
+  xlab = "vulnerable biomass", ylab = "ut"
+)
 
 plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
 
@@ -243,7 +247,7 @@ sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 system.time({
   dat <- NULL
-  for (i in 0:6) {
+  for (i in 1:5) {
     opt <- get_fit(hcrmode = i, objmode = 1)
     if (is.null(dat)) {
       dat <- opt
@@ -253,7 +257,7 @@ system.time({
   }
 })
 unique(dat$convergence)
-unique(dat$hcr[which(dat$convergence==1)])
+unique(dat$hcr[which(dat$convergence == 1)])
 summary(warnings())
 
 
@@ -265,13 +269,13 @@ pd <- dat %>%
     hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
     hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
     hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3)), 
+    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3)),
     hcr == "5" ~ paste0("double logistic = ", format(round(obj, 3), nsmall = 3)),
     hcr == "6" ~ paste0("DFO = ", format(round(obj, 3), nsmall = 3))
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)
-p5 <-
+p4 <-
   pd %>%
   filter(hcr != 5) %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
@@ -288,10 +292,12 @@ p5 <-
   guides(colour = guide_legend(override.aes = list(size = 3))) +
   scale_alpha(guide = "none") +
   ggtitle(bquote(P[big] ~ `=` ~ .(pd$Pbig)))
-p5
+p4
+pall <- cowplot::plot_grid(p4, p5, nrow = 2)
+
 
 pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
-ggsave("plots/pbigs.pdf", width = 8, height = 11)
+ggsave("plots/upow.pdf", width = 8, height = 11)
 
 
 

@@ -137,8 +137,8 @@ Type objective_function<Type>::operator()()
   sbro = (Lo*mwt).sum(); 
   Type reca = cr/sbro; 
   Type recb = (cr - 1) / (ro*sbro); 
-  Type Bo = (wt*ninit).sum();
-  Type No = ninit.sum(); 
+  Type Bo = (vul*wt*ninit).sum(); 
+  Type No = (vul*ninit).sum(); 
   Type wbaro = Bo/No; 
   
   PARAMETER_VECTOR(par); 

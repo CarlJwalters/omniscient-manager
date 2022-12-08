@@ -102,7 +102,7 @@ Type objective_function<Type>::operator()()
   DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dbl logistic; 6 = exponential; 7 = dfo policy
   DATA_VECTOR(knots);       // spline knots
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
-  DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (rnorm(1)) - 0.5 * (sd_survey)^2)
+  DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (N(0,1)) - 0.5 * (sd_survey)^2)
 
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);

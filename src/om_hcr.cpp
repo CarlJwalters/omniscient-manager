@@ -102,6 +102,7 @@ Type objective_function<Type>::operator()()
   DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dbl logistic; 6 = exponential; 7 = dfo policy
   DATA_VECTOR(knots);       // spline knots
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
+  DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (rnorm(1)) - 0.5 * (sd_survey)^2)
 
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -149,17 +150,19 @@ Type objective_function<Type>::operator()()
   vector<Type> utility(n_year);
   vector<Type> ssb(n_year);
   vector<Type> vulb(n_year);
+  vector<Type> vbobs(n_year);
   vector<Type> ut(n_year);
   abar.setZero();wbar.setZero(); yield.setZero(); 
   utility.setZero(); ssb.setZero(); vulb.setZero(); 
-  ut.setZero(); 
+  ut.setZero(); vbobs.setZero(); 
   
   n = ninit; 
   Type obj = 0;
 
   for(int t = 0; t < n_year; t++){
     if(t%100==0){n = rinit*n;}
-    vulb(t) = (vul*n*wt).sum();                                    
+    vulb(t) = (vul*n*wt).sum();  
+    vbobs(t) = vulb(t)*vmult(t);  
     ssb(t) = (mwt*n).sum();                                          
     abar(t) = (ages*n).sum() / sum(n);                             
     wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
@@ -169,31 +172,31 @@ Type objective_function<Type>::operator()()
       break;
         
       case 1:
-        ut(t) = ut_linear(par, vulb(t));
+        ut(t) = ut_linear(par, vbobs(t));
       break;
         
       case 2:
-        ut(t) = ut_logistic(par, vulb(t));
+        ut(t) = ut_logistic(par, vbobs(t));
       break;
       
       case 3:
-        ut(t) = ut_spline(par, knots, vulb(t));
+        ut(t) = ut_spline(par, knots, vbobs(t));
       break;
 
       case 4:
-        ut(t) = ut_rect(par, vulb(t));
+        ut(t) = ut_rect(par, vbobs(t));
       break;
       
       case 5:
-        ut(t) = ut_db_logistic(par, wbar(t), vulb(t));
+        ut(t) = ut_db_logistic(par, wbar(t), vbobs(t));
       break;
       
       case 6:
-        ut(t) = ut_exp(par, wbar(t), wbaro, vulb(t));
+        ut(t) = ut_exp(par, wbar(t), wbaro, vbobs(t));
       break;
       
       case 7:
-        ut(t) = ut_dfo(dfopar, vulb(t));
+        ut(t) = ut_dfo(dfopar, vbobs(t));
       break;
       
       default:
@@ -227,6 +230,7 @@ Type objective_function<Type>::operator()()
   REPORT(ssb);
   REPORT(yield);
   REPORT(vulb);
+  REPORT(vbobs); 
   REPORT(abar);
   REPORT(wbar); 
   REPORT(utility);

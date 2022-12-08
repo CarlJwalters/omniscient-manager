@@ -70,7 +70,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     objmode = objmode,
     hcrmode = hcrmode,
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
-    dfopar = c(Umsy, Bmsy)
+    dfopar = c(Umsy, Bmsy), 
+    vmult = exp(sd_survey * rnorm(length(years)) - 0.5 * (sd_survey)^2)
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -149,6 +150,8 @@ pbig <- 1
 Rbig <- 9
 sdr <- 0.6
 
+sd_survey <- 0.5
+
 #-------------------------------------------------------------------------------
 # now that we have starting parameters, run equilibrium analysis to calculate
 # Umsy and Bmsy for DFO rule
@@ -206,10 +209,10 @@ dyn.load(TMB::dynlib("src/om_hcr"))
 years <- 1:2000
 n_year <- length(years)
 set.seed(1)
-pbig <- 0.25 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
+pbig <- 0.05 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 6, objmode = 1)
+opt <- get_fit(hcrmode = 7, objmode = 1)
 
 plot(opt$Ut ~ opt$Vulb,
   xlab = "vulnerable biomass", ylab = "ut"
@@ -247,7 +250,7 @@ sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
 system.time({
   dat <- NULL
-  for (i in 1:5) {
+  for (i in 1:6) {
     opt <- get_fit(hcrmode = i, objmode = 1)
     if (is.null(dat)) {
       dat <- opt
@@ -260,7 +263,6 @@ unique(dat$convergence)
 unique(dat$hcr[which(dat$convergence == 1)])
 summary(warnings())
 
-
 dat$Pbig <- pbig
 pd <- dat %>%
   mutate(obj = obj / max(obj)) %>%
@@ -271,7 +273,7 @@ pd <- dat %>%
     hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
     hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3)),
     hcr == "5" ~ paste0("double logistic = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "6" ~ paste0("DFO = ", format(round(obj, 3), nsmall = 3))
+    hcr == "6" ~ paste0("exponential = ", format(round(obj, 3), nsmall = 3))
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)

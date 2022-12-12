@@ -5,7 +5,6 @@
 #                  TODO:
 #       better plotting scheme
 #       set up cross validation schemes
-#       think about other features to pull in to predicting Ut
 #
 # -----------------------------------------------------------
 library(devtools)
@@ -89,7 +88,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
       tmb_pars <- list(par = c(0.9, 0.01, 0.9))
     }
   } else if (tmb_data$hcr == 5) {
-    tmb_pars <- list(par = rep(0.5, 5))
+    tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
+    tmb_pars <- list(par = c(0.3,10,0.7,10,0.6))
   } else if (tmb_data$hcr == 6) {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (tmb_data$hcr == 7) {
@@ -120,8 +120,10 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
       opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
       ctr <- ctr + 1
     }
+    pdHess <- sdreport(obj)$pdHess
     objective <- -opt$objective
     convergence <- opt$convergence
+    pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
   dat <- dplyr::tibble(
     "Ut" = obj$report()$`ut`,
@@ -130,7 +132,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     "Wbar" = obj$report()$`wbar`,
     "hcr" = tmb_data$hcrmode,
     "obj" = ifelse(hcrmode < 7, objective, -obj$fn()),
-    "convergence" = ifelse(hcrmode < 7, convergence, 0)
+    "convergence" = ifelse(hcrmode < 7, convergence, 0), 
+    "pdHess" = ifelse(hcrmode < 7, pdHess, 0)
   )
   dat
 }
@@ -216,7 +219,10 @@ set.seed(1)
 pbig <- 0.05 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 5, objmode = 1)
+opt <- get_fit(hcrmode = 5, objmode = 0)
+unique(opt$convergence)
+unique(opt$pdHess)
+
 
 plot(opt$Ut ~ opt$Vulb,
   xlab = "vulnerable biomass", ylab = "ut"
@@ -252,11 +258,11 @@ p2
 bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-which_rules <- c(0,1,2,4,5,6)
+which_rules <- c(0,1,2,4,5)
 system.time({
   dat <- NULL
   for (i in which_rules) {
-    opt <- get_fit(hcrmode = i, objmode = 1)
+    opt <- get_fit(hcrmode = i, objmode = 0)
     if (is.null(dat)) {
       dat <- opt
     } else {
@@ -282,8 +288,9 @@ pd <- dat %>%
   )))
 my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
 pd$Utility <- factor(pd$Utility, levels = my_levels)
-p4 <-
+p <-
   pd %>%
+  filter(hcr != 0) %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
   geom_point(size = 0.25) +
   scale_color_brewer(palette = "Paired") +
@@ -298,8 +305,8 @@ p4 <-
   guides(colour = guide_legend(override.aes = list(size = 3))) +
   scale_alpha(guide = "none") +
   ggtitle(bquote(P[big] ~ `=` ~ .(pd$Pbig)))
-p4
-pall <- cowplot::plot_grid(p4, p5, nrow = 2)
+p
+pall <- cowplot::plot_grid(p3, p4, nrow = 2)
 
 
 pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)

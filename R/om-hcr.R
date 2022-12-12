@@ -4,7 +4,6 @@
 #
 #                  TODO:
 #       better plotting scheme
-#       read Reinforcement Learning stuff
 #       set up cross validation schemes
 #       think about other features to pull in to predicting Ut
 #
@@ -86,10 +85,15 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (tmb_data$hcr == 4) {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
+    if(objmode == 0){
+      tmb_pars <- list(par = c(0.9, 0.01, 0.9))
+    }
   } else if (tmb_data$hcr == 5) {
-    tmb_pars <- list(par = rep(0.1, 5))
+    tmb_pars <- list(par = rep(0.5, 5))
   } else if (tmb_data$hcr == 6) {
     tmb_pars <- list(par = rep(0.1, 3))
+  } else if (tmb_data$hcr == 7) {
+    tmb_pars <- list(par = rep(0.1, 3)) # just a filler for dfo policy
   }
   if (tmb_data$hcr == 0) {
     lower <- rep(0, length(years))
@@ -125,8 +129,8 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     "Abar" = obj$report()$`abar`,
     "Wbar" = obj$report()$`wbar`,
     "hcr" = tmb_data$hcrmode,
-    "obj" = ifelse(hcrmode < 6, objective, -obj$fn()),
-    "convergence" = ifelse(hcrmode < 6, convergence, 0)
+    "obj" = ifelse(hcrmode < 7, objective, -obj$fn()),
+    "convergence" = ifelse(hcrmode < 7, convergence, 0)
   )
   dat
 }
@@ -150,7 +154,7 @@ pbig <- 1
 Rbig <- 9
 sdr <- 0.6
 
-sd_survey <- 0.5
+sd_survey <- 1e-6
 
 #-------------------------------------------------------------------------------
 # now that we have starting parameters, run equilibrium analysis to calculate
@@ -212,7 +216,7 @@ set.seed(1)
 pbig <- 0.05 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 7, objmode = 1)
+opt <- get_fit(hcrmode = 5, objmode = 1)
 
 plot(opt$Ut ~ opt$Vulb,
   xlab = "vulnerable biomass", ylab = "ut"
@@ -248,9 +252,10 @@ p2
 bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
+which_rules <- c(0,1,2,4,5,6)
 system.time({
   dat <- NULL
-  for (i in 1:6) {
+  for (i in which_rules) {
     opt <- get_fit(hcrmode = i, objmode = 1)
     if (is.null(dat)) {
       dat <- opt
@@ -279,7 +284,6 @@ my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(
 pd$Utility <- factor(pd$Utility, levels = my_levels)
 p4 <-
   pd %>%
-  filter(hcr != 5) %>%
   ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
   geom_point(size = 0.25) +
   scale_color_brewer(palette = "Paired") +

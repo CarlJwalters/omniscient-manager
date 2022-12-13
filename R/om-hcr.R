@@ -66,7 +66,7 @@ get_fit <- function(hcrmode = c(
     upow = case_when(
       objmode == "yield" ~ 1,
       objmode == "utility" ~ upow
-    )
+    ),
     ages = ages,
     recmult = sim_dat$dat$recmult,
     hcrmode = case_when(
@@ -166,9 +166,9 @@ s <- .86
 rinit <- 0.01
 ro <- 1.0
 uo <- 0.13
-asl <- 0.1 #0.5
+asl <- 0.5 #0.5
 ahm <- 6
-upow <- 0.6
+upow <- 0.6 # note this only matters when objmode == "utility", else upow = 1
 ahv <- 5
 pbig <- 1
 Rbig <- 9
@@ -236,7 +236,7 @@ set.seed(1)
 pbig <- 0.1 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = "linear", objmode = "utility")
+opt <- get_fit(hcrmode = "linear", objmode = "yield")
 remember <- opt[[2]]
 
 

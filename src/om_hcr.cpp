@@ -96,10 +96,9 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(asl);         // vul parameter 1
   DATA_SCALAR(ahv);         // vul parameter 2
   DATA_SCALAR(ahm);         // age half mature 
-  DATA_SCALAR(upow);        // utility power
+  DATA_SCALAR(upow);        // utility power, 1 = risk neutral utility for catch, < 1 = risk aversion
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
-  DATA_INTEGER(objmode);    // objective
   DATA_INTEGER(hcrmode);    // feedback policy
   DATA_VECTOR(knots);       // spline knots
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
@@ -212,21 +211,8 @@ Type objective_function<Type>::operator()()
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
   }
-  
-  switch(objmode){
-    case 0:
-      obj -= yield.sum()/n_year;
-    break;
-    
-    case 1:
-      obj -= utility.sum()/n_year;
-    break;
-    
-    default:
-      std::cout<<"Objective code not yet implemented."<<std::endl;
-    exit(EXIT_FAILURE);
-    break;
-  }
+
+  obj -= utility.sum()/n_year;
   
   REPORT(ssb);
   REPORT(yield);

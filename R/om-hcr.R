@@ -1,7 +1,7 @@
-# -----------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Feedback policies for fisheries with highly variable recruitment dynamics
-#                Cahill and Walters Fall 2022
-# -----------------------------------------------------------
+#                  Cahill and Walters Fall 2022
+# ------------------------------------------------------------------------------
 library(devtools)
 library(TMB)
 devtools::install_github("ChrisFishCahill/gg-qfc")
@@ -10,7 +10,7 @@ library(tidyverse)
 library(future)
 library(furrr)
 
-# -----------------------------------------------------------
+# ------------------------------------------------------------------------------
 get_recmult <- function(pbig, Rbig, sdr) {
   urand <- runif(n_year, 0, 1)
   Nrand <- rnorm(n_year, 0, 1)
@@ -63,10 +63,12 @@ get_fit <- function(hcrmode = c(
     asl = asl,
     ahv = ahv,
     ahm = ahm,
-    upow = upow,
+    upow = case_when(
+      objmode == "yield" ~ 1,
+      objmode == "utility" ~ upow
+    )
     ages = ages,
     recmult = sim_dat$dat$recmult,
-    objmode = ifelse(objmode == "yield", 0, 1),
     hcrmode = case_when(
       hcrmode == "OM" ~ 0,
       hcrmode == "linear" ~ 1,
@@ -98,8 +100,8 @@ get_fit <- function(hcrmode = c(
       tmb_pars <- list(par = c(0.9, 0.01, 0.9))
     }
   } else if (hcrmode == "db_logistic") {
-    # tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
-    tmb_pars <- list(par = c(0.3, 10, 0.7, 10, 0.6))
+     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
+     # tmb_pars <- list(par = c(0.3, 10, 0.7, 10, 0.6))
   } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (hcrmode == "dfo") {
@@ -145,9 +147,9 @@ get_fit <- function(hcrmode = c(
     "Abar" = obj$report()$`abar`,
     "Wbar" = obj$report()$`wbar`,
     "hcr" = hcrmode,
-    "obj" = ifelse(hcrmode < 7, objective, -obj$fn()),
-    "convergence" = ifelse(hcrmode < 7, convergence, 0),
-    "pdHess" = ifelse(hcrmode < 7, pdHess, 0),
+    "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
+    "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
+    "pdHess" = ifelse(hcrmode != "dfo", pdHess, 0),
     "criterion" = objmode
   )
   list(dat, opt$par)
@@ -164,7 +166,7 @@ s <- .86
 rinit <- 0.01
 ro <- 1.0
 uo <- 0.13
-asl <- 0.5
+asl <- 0.1 #0.5
 ahm <- 6
 upow <- 0.6
 ahv <- 5
@@ -205,8 +207,8 @@ for (i in 1:length(Useq)) {
   su <- 1
   for (a in 1:length(ages)) {
     if (a == length(ages)) {
-      su <- su / (1 - s * (1 - Useq[i] * vul[a]))
-    } # plus group effect
+      su <- su / (1 - s * (1 - Useq[i] * vul[a])) # plus group effect
+    }
     sbrf <- sbrf + su * mwt[a]
     ypr <- ypr + su * Useq[i] * vul[a] * wt[a]
     su <- su * s * (1 - Useq[i] * vul[a])
@@ -231,13 +233,11 @@ dyn.load(TMB::dynlib("src/om_hcr"))
 years <- 1:2000
 n_year <- length(years)
 set.seed(1)
-pbig <- 0.05 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
+pbig <- 0.1 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = "db_logistic", objmode = "utility")
-opt[[2]]
-
-
+opt <- get_fit(hcrmode = "linear", objmode = "utility")
+remember <- opt[[2]]
 
 
 unique(opt[[1]]$convergence)
@@ -249,7 +249,12 @@ plot(opt[[1]]$Ut ~ opt[[1]]$Vulb,
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Wbar, main = unique(round(opt[[1]]$obj)))
 
-my_dat <- data.frame(Ut = opt$Ut, Vulb = opt$Vulb, Wbar = opt$Wbar)
+my_dat <- data.frame(Ut = opt[[1]]$Ut, Vulb = opt[[1]]$Vulb, Wbar = opt[[1]]$Wbar)
+library(plot3D)
+scatter3D(my_dat$Vulb, my_dat$Wbar, my_dat$Ut, clab = "U(t)", 
+          theta = 310, phi = 20, 
+          zlab = "U(t)", xlab = "Vulb(t)", ylab = "Wbar(t)",
+          cex = 0.6, pch = 16, bty = "b2")
 
 p <-
   my_dat %>%
@@ -277,18 +282,19 @@ p2
 bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-which_rules <- c(0, 1, 2, 4, 5)
+which_rules <- c("linear", "db_logistic", "logistic")
 system.time({
   dat <- NULL
   for (i in which_rules) {
-    opt <- get_fit(hcrmode = i, objmode = 0)
+    opt <- get_fit(hcrmode = i, objmode = "yield")
     if (is.null(dat)) {
-      dat <- opt
+      dat <- opt[[1]]
     } else {
-      dat <- rbind(dat, opt)
+      dat <- rbind(dat, opt[[1]])
     }
   }
 })
+
 unique(dat$convergence)
 unique(dat$hcr[which(dat$convergence == 1)])
 summary(warnings())
@@ -296,21 +302,14 @@ summary(warnings())
 dat$Pbig <- pbig
 pd <- dat %>%
   mutate(obj = obj / max(obj)) %>%
-  mutate(Utility = as.factor(case_when(
-    hcr == "0" ~ paste0("OM = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "1" ~ paste0("linear = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "2" ~ paste0("logistic = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "3" ~ paste0("spline = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "4" ~ paste0("rectilinear = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "5" ~ paste0("double logistic = ", format(round(obj, 3), nsmall = 3)),
-    hcr == "6" ~ paste0("exponential = ", format(round(obj, 3), nsmall = 3))
-  )))
-my_levels <- unique(pd$Utility[rev(order(unlist(str_extract_all(pd$Utility, "\\(?[0-9,.]+\\)?"))))])
-pd$Utility <- factor(pd$Utility, levels = my_levels)
+  mutate(Yield = paste0(hcr, " = ", format(round(obj, 3), nsmall = 3)))
+
+my_levels <- unique(pd$Yield[rev(order(unlist(str_extract_all(pd$Yield, "\\(?[0-9,.]+\\)?"))))])
+pd$Yield <- factor(pd$Yield, levels = my_levels)
 p <-
   pd %>%
   filter(hcr != 0) %>%
-  ggplot(aes(x = Vulb, y = Ut, color = Utility)) +
+  ggplot(aes(x = Vulb, y = Ut, color = Yield)) +
   geom_point(size = 0.25) +
   scale_color_brewer(palette = "Paired") +
   ylab(expression(Exploitation ~ rate ~ U[t])) +
@@ -332,8 +331,9 @@ pall <- cowplot::plot_grid(p, p1, p2, p3, p4, p5, nrow = 3, scale = 0.98)
 ggsave("plots/upow.pdf", width = 8, height = 11)
 
 
-
-
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Extra code:
 
 

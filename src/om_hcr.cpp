@@ -99,8 +99,8 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(upow);        // utility power
   DATA_VECTOR(ages);    
   DATA_VECTOR(recmult);     // recruitment sequence
-  DATA_INTEGER(objmode);    // 0 = MAY, 1 = utility
-  DATA_INTEGER(hcrmode);    // 0 = U(t); 1 = linear; 2 = logistic; 3 = spline; 4 = rect; 5 = dbl logistic; 6 = exponential; 7 = dfo policy
+  DATA_INTEGER(objmode);    // objective
+  DATA_INTEGER(hcrmode);    // feedback policy
   DATA_VECTOR(knots);       // spline knots
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
   DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (N(0,1)) - 0.5 * (sd_survey)^2)

@@ -1,11 +1,6 @@
 # -----------------------------------------------------------
-# Suboptimal feedback policies for fisheries with highly variable recruitment dynamics
+# Feedback policies for fisheries with highly variable recruitment dynamics
 #                Cahill and Walters Fall 2022
-#
-#                  TODO:
-#       better plotting scheme
-#       set up cross validation schemes
-#
 # -----------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -49,7 +44,13 @@ get_recmult <- function(pbig, Rbig, sdr) {
 #   geom_line() +
 #   theme_qfc()
 
-get_fit <- function(hcrmode = NA, objmode = NA) {
+get_fit <- function(hcrmode = c(
+                      "OM", "linear", "logistic", "spline", "rect",
+                      "db_logistic", "exponential", "dfo"
+                    ),
+                    objmode = c("yield", "utility")) {
+  hcrmode <- match.arg(hcrmode)
+  objmode <- match.arg(objmode)
   tmb_data <- list(
     n_year = length(years),
     n_age = length(ages),
@@ -65,53 +66,66 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     upow = upow,
     ages = ages,
     recmult = sim_dat$dat$recmult,
-    objmode = objmode,
-    hcrmode = hcrmode,
+    objmode = ifelse(objmode == "yield", 0, 1),
+    hcrmode = case_when(
+      hcrmode == "OM" ~ 0,
+      hcrmode == "linear" ~ 1,
+      hcrmode == "logistic" ~ 2,
+      hcrmode == "spline" ~ 3,
+      hcrmode == "rect" ~ 4,
+      hcrmode == "db_logistic" ~ 5,
+      hcrmode == "exponential" ~ 6,
+      hcrmode == "dfo" ~ 7
+    ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
-    dfopar = c(Umsy, Bmsy), 
+    dfopar = c(Umsy, Bmsy),
     vmult = exp(sd_survey * rnorm(length(years)) - 0.5 * (sd_survey)^2)
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
   }
-  if (tmb_data$hcr == 0) {
+  if (hcrmode == "OM") {
     tmb_pars <- list(par = rep(0.1, length(years)))
-  } else if (tmb_data$hcr == 1) {
+  } else if (hcrmode == "linear") {
     tmb_pars <- list(par = c(0.1, 0.1))
-  } else if (tmb_data$hcr == 2) {
+  } else if (hcrmode == "logistic") {
     tmb_pars <- list(par = rep(0.1, 3))
-  } else if (tmb_data$hcr == 3) {
+  } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
-  } else if (tmb_data$hcr == 4) {
+  } else if (hcrmode == "rect") {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
-    if(objmode == 0){
+    if (objmode == "yield") {
       tmb_pars <- list(par = c(0.9, 0.01, 0.9))
     }
-  } else if (tmb_data$hcr == 5) {
-    tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
-    tmb_pars <- list(par = c(0.3,10,0.7,10,0.6))
-  } else if (tmb_data$hcr == 6) {
+  } else if (hcrmode == "db_logistic") {
+    # tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
+    tmb_pars <- list(par = c(0.3, 10, 0.7, 10, 0.6))
+  } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 3))
-  } else if (tmb_data$hcr == 7) {
+  } else if (hcrmode == "dfo") {
     tmb_pars <- list(par = rep(0.1, 3)) # just a filler for dfo policy
   }
-  if (tmb_data$hcr == 0) {
+  if (hcrmode == "OM") {
     lower <- rep(0, length(years))
     upper <- rep(1, length(years))
   }
-  if (tmb_data$hcr > 0) {
+  if (hcrmode != "OM") {
     lower <- rep(-Inf, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
   }
-  if (tmb_data$hcr == 3) {
+  if (hcrmode == "spline") {
     lower <- rep(0, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
+  }
+  if (hcrmode == "db_logistic") {
+    lower <- c(-Inf, 0, -Inf, 0, -Inf)
+    upper <- c(1, Inf, Inf, Inf, Inf)
   }
   if (!"om_hcr" %in% names(getLoadedDLLs())) {
     dyn.load(TMB::dynlib("src/om_hcr"))
   }
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-  if (hcrmode < 7) {
+  if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
     ctr <- 1
     if (opt$convergence == 1 && ctr < 5) {
@@ -130,12 +144,13 @@ get_fit <- function(hcrmode = NA, objmode = NA) {
     "Vulb" = obj$report()$`vulb`,
     "Abar" = obj$report()$`abar`,
     "Wbar" = obj$report()$`wbar`,
-    "hcr" = tmb_data$hcrmode,
+    "hcr" = hcrmode,
     "obj" = ifelse(hcrmode < 7, objective, -obj$fn()),
-    "convergence" = ifelse(hcrmode < 7, convergence, 0), 
-    "pdHess" = ifelse(hcrmode < 7, pdHess, 0)
+    "convergence" = ifelse(hcrmode < 7, convergence, 0),
+    "pdHess" = ifelse(hcrmode < 7, pdHess, 0),
+    "criterion" = objmode
   )
-  dat
+  list(dat, opt$par)
 }
 
 #-------------------------------------------------------------------------------
@@ -219,16 +234,20 @@ set.seed(1)
 pbig <- 0.05 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = 5, objmode = 0)
-unique(opt$convergence)
-unique(opt$pdHess)
+opt <- get_fit(hcrmode = "db_logistic", objmode = "utility")
+opt[[2]]
 
 
-plot(opt$Ut ~ opt$Vulb,
+
+
+unique(opt[[1]]$convergence)
+unique(opt[[1]]$pdHess)
+
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb,
   xlab = "vulnerable biomass", ylab = "ut"
 )
 
-plot(opt$Ut ~ opt$Wbar, main = unique(round(opt$obj)))
+plot(opt[[1]]$Ut ~ opt[[1]]$Wbar, main = unique(round(opt[[1]]$obj)))
 
 my_dat <- data.frame(Ut = opt$Ut, Vulb = opt$Vulb, Wbar = opt$Wbar)
 
@@ -258,7 +277,7 @@ p2
 bigplot <- cowplot::plot_grid(p, p1, p2, nrow = 3)
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-which_rules <- c(0,1,2,4,5)
+which_rules <- c(0, 1, 2, 4, 5)
 system.time({
   dat <- NULL
   for (i in which_rules) {

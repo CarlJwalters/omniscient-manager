@@ -46,7 +46,7 @@ get_recmult <- function(pbig, Rbig, sdr) {
 
 get_fit <- function(hcrmode = c(
                       "OM", "linear", "logistic", "spline", "rect",
-                      "db_logistic", "exponential", "dfo"
+                      "db_logistic", "exponential", "dfo", "experimental"
                     ),
                     objmode = c("yield", "utility")) {
   hcrmode <- match.arg(hcrmode)
@@ -77,7 +77,8 @@ get_fit <- function(hcrmode = c(
       hcrmode == "rect" ~ 4,
       hcrmode == "db_logistic" ~ 5,
       hcrmode == "exponential" ~ 6,
-      hcrmode == "dfo" ~ 7
+      hcrmode == "dfo" ~ 7, 
+      hcrmode == "experimental" ~ 8
     ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
     dfopar = c(Umsy, Bmsy),
@@ -106,6 +107,8 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = rep(0.1, 3))
   } else if (hcrmode == "dfo") {
     tmb_pars <- list(par = rep(0.1, 3)) # just a filler for dfo policy
+  } else if (hcrmode == "experimental"){
+    tmb_pars <- list(par = rep(0, 3)) 
   }
   if (hcrmode == "OM") {
     lower <- rep(0, length(years))
@@ -236,9 +239,15 @@ set.seed(1)
 pbig <- 0.1 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
 
-opt <- get_fit(hcrmode = "linear", objmode = "yield")
-remember <- opt[[2]]
+opt <- get_fit(hcrmode = "logistic", objmode = "yield")
+logistic <- opt[[1]]$obj[1]
 
+linear
+logistic
+opt[[2]]
+
+# fit <- optim(tmb_pars$par, obj$fn, obj$gr, method = "L-BFGS-B", 
+#              lower = lower, upper = upper, hessian=T)
 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)

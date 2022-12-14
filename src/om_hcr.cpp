@@ -82,6 +82,14 @@ Type ut_dfo(vector<Type> dfopar, Type vulb)
   return out;
 }
 
+// experimental form 
+template <class Type>
+Type ut_experimental(vector<Type> par, Type wbar, Type vulb)
+{
+  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar); 
+  return out;
+}
+
 template <class Type>
 Type objective_function<Type>::operator()()
 {
@@ -164,7 +172,7 @@ Type objective_function<Type>::operator()()
     vulb(t) = (vul*n*wt).sum();  
     vbobs(t) = vulb(t)*vmult(t);  
     ssb(t) = (mwt*n).sum();                                          
-    abar(t) = (ages*n).sum() / sum(n);                             
+    abar(t) = (vul*ages*n).sum() / sum(n);                             
     wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
     switch(hcrmode){
       case 0:
@@ -199,6 +207,10 @@ Type objective_function<Type>::operator()()
         ut(t) = ut_dfo(dfopar, vbobs(t));
       break;
       
+      case 8:
+        ut(t) = ut_experimental(par, wbar(t), vbobs(t));
+      break;
+      
       default:
         std::cout<<"HCR code not yet implemented."<<std::endl;
       exit(EXIT_FAILURE);
@@ -211,7 +223,6 @@ Type objective_function<Type>::operator()()
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
   }
-
   obj -= utility.sum()/n_year;
   
   REPORT(ssb);

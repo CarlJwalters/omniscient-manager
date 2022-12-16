@@ -90,6 +90,18 @@ Type ut_experimental(vector<Type> par, Type wbar, Type vulb)
   return out;
 }
 
+// hopefully last rule form 
+template <class Type>
+Type ut_misery(vector<Type> par, Type wbar, Type vulb)
+{
+  vector<Type> seq(2);
+  seq.setZero();
+  seq(0) = 0;
+  seq(1) = (vulb - par(0))/vulb/(1 + exp(-par(1)*(wbar - par(2)))); 
+  Type out = max(seq);
+  return out; 
+}
+
 template <class Type>
 Type objective_function<Type>::operator()()
 {
@@ -209,6 +221,10 @@ Type objective_function<Type>::operator()()
       
       case 8:
         ut(t) = ut_experimental(par, wbar(t), vbobs(t));
+      break;
+      
+      case 9:
+        ut(t) = ut_misery(par, wbar(t), vbobs(t));
       break;
       
       default:

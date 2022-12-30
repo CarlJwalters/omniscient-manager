@@ -315,12 +315,20 @@ yield
 ################################################################################
 # extra plotting junk
 sim_dat <- get_recmult(pbig = pbig, Rbig, sdr)
-opt <- get_fit(hcrmode = "spline", objmode = "utility")
+opt <- get_fit(hcrmode = "logit-linear", objmode = "yield")
 opt[[1]]$obj[1]
 opt[[2]]
 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
+
+# Notes:
+# logit linear appears unstable for utility
+# 
+# For yield:
+# spline, rect, db logistic, exp, logit, 
+# logit-linear* (bumps against bound every time)
+
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb,
   xlab = "vulnerable biomass", ylab = "ut"

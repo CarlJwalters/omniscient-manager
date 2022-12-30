@@ -67,6 +67,26 @@ Type ut_exp(vector<Type> par, Type wbar, Type wbaro, Type vulb)
   return out;
 }
 
+// logit form 
+template <class Type>
+Type ut_logit(vector<Type> par, Type wbar, Type vulb)
+{
+  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar); 
+  return out;
+}
+
+// logit-linear
+template <class Type>
+Type ut_logit_linear(vector<Type> par, Type wbar, Type vulb)
+{
+  vector<Type> seq(2);
+  seq.setZero();
+  seq(0) = 0;
+  seq(1) = (vulb - par(0))/vulb/(1 + exp(-par(1)*(wbar - par(2)))); 
+  Type out = max(seq);
+  return out; 
+}
+
 // canada rule -- note dfopar read in as data
 template <class Type> 
 Type ut_dfo(vector<Type> dfopar, Type vulb)
@@ -79,26 +99,6 @@ Type ut_dfo(vector<Type> dfopar, Type vulb)
   if (out < 0){out = 0;}
   if (out > Umsy){out = Umsy;}
   return out;
-}
-
-// logit form 
-template <class Type>
-Type ut_logit(vector<Type> par, Type wbar, Type vulb)
-{
-  Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar); 
-  return out;
-}
-
-// hopefully last rule form 
-template <class Type>
-Type ut_logit_linear(vector<Type> par, Type wbar, Type vulb)
-{
-  vector<Type> seq(2);
-  seq.setZero();
-  seq(0) = 0;
-  seq(1) = (vulb - par(0))/vulb/(1 + exp(-par(1)*(wbar - par(2)))); 
-  Type out = max(seq);
-  return out; 
 }
 
 template <class Type>

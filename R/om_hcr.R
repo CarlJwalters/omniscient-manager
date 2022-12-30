@@ -111,7 +111,7 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
     # tmb_pars <- list(par = c(0.3, 10, 0.7, 10, 0.6))
   } else if (hcrmode == "exponential") {
-    tmb_pars <- list(par = rep(0.1, 3))
+    tmb_pars <- list(par = rep(0.1, 2))
   } else if (hcrmode == "dfo") {
     tmb_pars <- list(par = rep(0.1, 3)) # just a filler for dfo policy
   } else if (hcrmode == "logit") {
@@ -247,7 +247,6 @@ dyn.load(TMB::dynlib("src/om_hcr"))
 
 years <- 1:2000
 n_year <- length(years)
-set.seed(1)
 pbig <- 0.07 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 
 set.seed(1)
@@ -288,7 +287,7 @@ utility
 system.time({
   dat <- NULL
   for (i in rules) {
-    if (i == "spline") {
+    if (i == "spline" || i == "exponential") {
       next
     }
     opt <- get_fit(hcrmode = i, objmode = "yield")
@@ -315,13 +314,17 @@ yield <- dat %>%
 utility
 yield
 
+opt <- get_fit(hcrmode = "exponential", objmode = "yield")
+opt
+
 ################################################################################
 # testing
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "logit-linear", objmode = "yield")
+opt <- get_fit(hcrmode = "exponential", objmode = "yield")
 opt[[1]]$obj[1]
 
+plot(opt[[1]]$Ut~opt[[1]]$Vulb)
 
 opt[[2]]
 
@@ -468,7 +471,42 @@ opt$objective
 # 
 # 
 
+opt <- get_fit(hcrmode = "exponential", objmode = "yield")
+opt[[1]]$obj[1]
+opt[[2]]
 
+unique(opt[[1]]$convergence)
+unique(opt[[1]]$pdHess)
+
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb,
+     xlab = "vulnerable biomass", ylab = "ut"
+)
+
+plot(opt[[1]]$Ut ~ opt[[1]]$Wbar, main = unique(round(opt[[1]]$obj)))
+
+my_dat <- data.frame(Ut = opt[[1]]$Ut, Vulb = opt[[1]]$Vulb, Wbar = opt[[1]]$Wbar)
+library(plot3D)
+png("plots/3dcarl.png",
+    width = 10, height = 5, units = "in", res = 1200
+)
+par(mfrow=c(1,3))
+scatter3D(my_dat$Vulb, my_dat$Wbar, my_dat$Ut, clab = "U(t)", 
+          theta = 320, phi = 20, 
+          zlab = "Exploitation rate", xlab = "Vulb", ylab = "Wbar",
+          cex = 0.6, pch = 16, bty = "b2")
+
+scatter3D(my_dat$Vulb, my_dat$Wbar, my_dat$Ut, clab = "U(t)", 
+          theta = 200, phi = 20, 
+          zlab = "Exploitation rate", xlab = "Vulb", ylab = "Wbar",
+          cex = 0.6, pch = 16, bty = "b2")
+
+
+scatter3D(my_dat$Vulb, my_dat$Wbar, my_dat$Ut, clab = "U(t)", 
+          theta = 360, phi = 20, 
+          zlab = "Exploitation rate", xlab = "Vulb", ylab = "Wbar",
+          cex = 0.6, pch = 16, bty = "b2")
+
+dev.off()
 
 
 

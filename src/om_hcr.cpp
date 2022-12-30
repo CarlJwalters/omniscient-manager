@@ -61,9 +61,9 @@ Type ut_db_logistic(vector<Type> par, Type wbar, Type vulb)
 
 // exponential form 
 template <class Type>
-Type ut_exp(vector<Type> par, Type wbar, Type wbaro, Type vulb)
+Type ut_exp(vector<Type> par, Type vulb)
 {
-  Type out = (par(0) + par(2)*(wbar-wbaro/2))*(1-exp(-par(1)*vulb)); 
+  Type out = par(0)*(1-exp(-par(1)*vulb)); 
   return out;
 }
 
@@ -157,10 +157,7 @@ Type objective_function<Type>::operator()()
   sbro = (Lo*mwt).sum(); 
   Type reca = cr/sbro; 
   Type recb = (cr - 1) / (ro*sbro); 
-  Type Bo = (vul*wt*ninit).sum(); 
-  Type No = (vul*ninit).sum(); 
-  Type wbaro = Bo/No; 
-  
+
   PARAMETER_VECTOR(par); 
   
   vector<Type> abar(n_year);
@@ -211,7 +208,7 @@ Type objective_function<Type>::operator()()
       break;
       
       case 6:
-        ut(t) = ut_exp(par, wbar(t), wbaro, vbobs(t));
+        ut(t) = ut_exp(par, vbobs(t));
       break;
       
       case 7:

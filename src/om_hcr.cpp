@@ -1,9 +1,8 @@
 #include <TMB.hpp>
 
 /*
- * Estimating feedback policies for age-structured fish populations 
- *             w/ highly variable recruitment dynamics
- *                    cahill & walters oct 2022
+ * Harvest strategies for fisheries with highly variable recruitment dynamics
+ *                      Cahill & Walters oct 2022
  */
 
 // linear 
@@ -82,9 +81,9 @@ Type ut_dfo(vector<Type> dfopar, Type vulb)
   return out;
 }
 
-// experimental form 
+// logit form 
 template <class Type>
-Type ut_experimental(vector<Type> par, Type wbar, Type vulb)
+Type ut_logit(vector<Type> par, Type wbar, Type vulb)
 {
   Type out = invlogit(par(0) + par(1)*vulb + par(2)*wbar); 
   return out;
@@ -92,7 +91,7 @@ Type ut_experimental(vector<Type> par, Type wbar, Type vulb)
 
 // hopefully last rule form 
 template <class Type>
-Type ut_misery(vector<Type> par, Type wbar, Type vulb)
+Type ut_logit_linear(vector<Type> par, Type wbar, Type vulb)
 {
   vector<Type> seq(2);
   seq.setZero();
@@ -216,15 +215,15 @@ Type objective_function<Type>::operator()()
       break;
       
       case 7:
-        ut(t) = ut_dfo(dfopar, vbobs(t));
+        ut(t) = ut_logit(par, wbar(t), vbobs(t));
       break;
       
       case 8:
-        ut(t) = ut_experimental(par, wbar(t), vbobs(t));
+        ut(t) = ut_logit_linear(par, wbar(t), vbobs(t));
       break;
       
       case 9:
-        ut(t) = ut_misery(par, wbar(t), vbobs(t));
+        ut(t) = ut_dfo(dfopar, vbobs(t));
       break;
       
       default:
@@ -239,7 +238,7 @@ Type objective_function<Type>::operator()()
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
   }
-  obj -= utility.sum()/n_year;
+  obj -= utility.sum();
   
   REPORT(ssb);
   REPORT(yield);

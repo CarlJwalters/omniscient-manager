@@ -17,14 +17,6 @@ Type ut_linear(vector<Type> par, Type vulb)
   return out;
 }  
 
-// logistic 
-template <class Type> 
-Type ut_logistic(vector<Type> par, Type vulb)
-{ 
-  Type out = par(0) / (1 + exp(-par(1)*(vulb - par(2)))); 
-  return out;
-}  
-
 // spline 
 template <class Type> 
 Type ut_spline(vector<Type> par, vector<Type> knots, Type vulb)
@@ -190,36 +182,32 @@ Type objective_function<Type>::operator()()
       case 1:
         ut(t) = ut_linear(par, vbobs(t));
       break;
-        
-      case 2:
-        ut(t) = ut_logistic(par, vbobs(t));
-      break;
       
-      case 3:
+      case 2:
         ut(t) = ut_spline(par, knots, vbobs(t));
       break;
 
-      case 4:
+      case 3:
         ut(t) = ut_rect(par, vbobs(t));
       break;
       
-      case 5:
+      case 4:
         ut(t) = ut_db_logistic(par, wbar(t), vbobs(t));
       break;
       
-      case 6:
+      case 5:
         ut(t) = ut_exp(par, vbobs(t));
       break;
       
-      case 7:
+      case 6:
         ut(t) = ut_logit(par, wbar(t), vbobs(t));
       break;
       
-      case 8:
+      case 7:
         ut(t) = ut_logit_linear(par, wbar(t), vbobs(t));
       break;
       
-      case 9:
+      case 8:
         ut(t) = ut_dfo(dfopar, vbobs(t));
       break;
       

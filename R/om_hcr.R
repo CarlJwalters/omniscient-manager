@@ -50,9 +50,8 @@ get_devs <- function(pbig, Rbig, sdr, sd_survey) {
 #   theme_qfc()
 
 get_fit <- function(hcrmode = c(
-                      "OM", "linear", "logistic", "spline", "rect",
-                      "db_logistic", "exponential", "dfo", "logit",
-                      "logit-linear"
+                      "OM", "linear", "spline", "rect", "db_logistic",
+                      "exponential", "dfo", "logit", "logit-linear"
                     ),
                     objmode = c("yield", "utility")) {
   hcrmode <- match.arg(hcrmode)
@@ -78,14 +77,13 @@ get_fit <- function(hcrmode = c(
     hcrmode = case_when(
       hcrmode == "OM" ~ 0,
       hcrmode == "linear" ~ 1,
-      hcrmode == "logistic" ~ 2,
-      hcrmode == "spline" ~ 3,
-      hcrmode == "rect" ~ 4,
-      hcrmode == "db_logistic" ~ 5,
-      hcrmode == "exponential" ~ 6,
-      hcrmode == "logit" ~ 7,
-      hcrmode == "logit-linear" ~ 8,
-      hcrmode == "dfo" ~ 9
+      hcrmode == "spline" ~ 2,
+      hcrmode == "rect" ~ 3,
+      hcrmode == "db_logistic" ~ 4,
+      hcrmode == "exponential" ~ 5,
+      hcrmode == "logit" ~ 6,
+      hcrmode == "logit-linear" ~ 7,
+      hcrmode == "dfo" ~ 8
     ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
     dfopar = c(Umsy, Bmsy),
@@ -98,8 +96,6 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = rep(0.1, length(years)))
   } else if (hcrmode == "linear") {
     tmb_pars <- list(par = c(0.1, 0.1))
-  } else if (hcrmode == "logistic") {
-    tmb_pars <- list(par = rep(0.1, 3))
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
@@ -254,7 +250,7 @@ sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
 # run a few rules
 rules <- c(
-  "OM", "linear", "logistic",
+  "OM", "linear", 
   "spline", "rect", "db_logistic",
   "exponential", "logit", "logit-linear", "dfo"
 )
@@ -262,6 +258,9 @@ rules <- c(
 system.time({
   dat <- NULL
   for (i in rules) {
+    if (i == "logit-linear") {
+      next
+    }
     opt <- get_fit(hcrmode = i, objmode = "utility")
     if (is.null(dat)) {
       dat <- opt[[1]]
@@ -314,14 +313,11 @@ yield <- dat %>%
 utility
 yield
 
-opt <- get_fit(hcrmode = "exponential", objmode = "yield")
-opt
-
 ################################################################################
 # testing
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "exponential", objmode = "yield")
+opt <- get_fit(hcrmode = "rect", objmode = "yield")
 opt[[1]]$obj[1]
 
 plot(opt[[1]]$Ut~opt[[1]]$Vulb)
@@ -345,7 +341,7 @@ unique(opt[[1]]$pdHess)
 
 # Debugging junk: 
 objmode = "yield"
-hcrmode = "logit"
+hcrmode = "rect"
 
 tmb_data <- list(
   n_year = length(years),
@@ -368,14 +364,13 @@ tmb_data <- list(
   hcrmode = case_when(
     hcrmode == "OM" ~ 0,
     hcrmode == "linear" ~ 1,
-    hcrmode == "logistic" ~ 2,
-    hcrmode == "spline" ~ 3,
-    hcrmode == "rect" ~ 4,
-    hcrmode == "db_logistic" ~ 5,
-    hcrmode == "exponential" ~ 6,
-    hcrmode == "logit" ~ 7,
-    hcrmode == "logit-linear" ~ 8,
-    hcrmode == "dfo" ~ 9
+    hcrmode == "spline" ~ 2,
+    hcrmode == "rect" ~ 3,
+    hcrmode == "db_logistic" ~ 4,
+    hcrmode == "exponential" ~ 5,
+    hcrmode == "logit" ~ 6,
+    hcrmode == "logit-linear" ~ 7,
+    hcrmode == "dfo" ~ 8
   ),
   knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
   dfopar = c(Umsy, Bmsy),
@@ -430,48 +425,22 @@ if (hcrmode == "logit-linear") {
 if (!"om_hcr" %in% names(getLoadedDLLs())) {
   dyn.load(TMB::dynlib("src/om_hcr"))
 }
+
+tmb_pars <- list(par = c(0.2, 0.3, 0.6))
+tmb_pars <- list(par = c(0.2, 0.03, 0.06))
+tmb_pars <- list(par = c(0.2, 0.7, 0.8))
+
+
+
 obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 opt$convergence
 opt$objective
-ctr <- 1
 
-while (opt$convergence == 1 && ctr < 5) {
-    tmb_pars <- list(par = opt$par)
-    obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
-    opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-    ctr <- ctr + 1
-}
-opt$objective
-#   
-# 
-# pdHess <- sdreport(obj)$pdHess
-#   objective <- -opt$objective
-#   convergence <- opt$convergence
-#   pdHess <- ifelse(pdHess == TRUE, 0, 1)
-# }
-# 
-# 
-# 
-# 
-# 
-# 
-# ctr <- 1
-#   if (opt$convergence == 1 && ctr < 5) {
-#     tmb_pars <- list(par = opt$par)
-#     obj <- MakeADFun(tmb_data, tmb_pars, silent = T, DLL = "om_hcr")
-#     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
-#     ctr <- ctr + 1
-#   }
-#   pdHess <- sdreport(obj)$pdHess
-#   objective <- -opt$objective
-#   convergence <- opt$convergence
-#   pdHess <- ifelse(pdHess == TRUE, 0, 1)
-# }
-# 
-# 
+plot(obj$report(opt$par)$`ut`~obj$report(opt$par)$`vulb`)
 
-opt <- get_fit(hcrmode = "exponential", objmode = "yield")
+
+opt <- get_fit(hcrmode = "rect", objmode = "yield")
 opt[[1]]$obj[1]
 opt[[2]]
 

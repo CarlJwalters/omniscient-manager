@@ -1,6 +1,14 @@
 # ------------------------------------------------------------------------------
-# Feedback policies for fisheries with highly variable recruitment dynamics
+# Harvest strategies for fisheries with highly variable recruitment dynamics
 #                  Cahill and Walters Fall 2022
+# NOTE!!!
+
+# This
+# File
+# Is 
+# Deprecated
+# see
+# om_hcr.R instead
 # ------------------------------------------------------------------------------
 library(devtools)
 library(TMB)
@@ -46,8 +54,8 @@ get_recmult <- function(pbig, Rbig, sdr) {
 
 get_fit <- function(hcrmode = c(
                       "OM", "linear", "logistic", "spline", "rect",
-                      "db_logistic", "exponential", "dfo", "experimental", 
-                      "misery"
+                      "db_logistic", "exponential", "logit", 
+                      "misery", "dfo"
                     ),
                     objmode = c("yield", "utility")) {
   hcrmode <- match.arg(hcrmode)
@@ -112,7 +120,7 @@ get_fit <- function(hcrmode = c(
   } else if (hcrmode == "experimental"){
     tmb_pars <- list(par = rep(0, 3)) 
   } else if (hcrmode == "misery"){
-    tmb_pars <- list(par = c(0.6, 10, 0.7))
+    tmb_pars <- list(par = c(0.6, 1, 0.7))
   }
   if (hcrmode == "OM") {
     lower <- rep(0, length(years))
@@ -129,6 +137,10 @@ get_fit <- function(hcrmode = c(
   if (hcrmode == "db_logistic") {
     lower <- c(-Inf, 0, -Inf, 0, -Inf)
     upper <- c(1, Inf, Inf, Inf, Inf)
+  }
+  if (hcrmode == "misery") {
+    lower <- c(-Inf, -Inf, -Inf)
+    upper <- c(Inf, 100, Inf)
   }
   if (!"om_hcr" %in% names(getLoadedDLLs())) {
     dyn.load(TMB::dynlib("src/om_hcr"))

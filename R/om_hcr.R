@@ -99,9 +99,11 @@ get_fit <- function(hcrmode = c(
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
-    tmb_pars <- list(par = c(0.02, 0.01, 0.1))
+    if (objmode == "utility") {
+      tmb_pars <- list(par = c(0.02, 0.01, 0.1))
+    }
     if (objmode == "yield") {
-      tmb_pars <- list(par = c(0.9, 0.01, 0.9))
+      tmb_pars <- list(par = c(0.2, 0.3, 0.9))
     }
   } else if (hcrmode == "db_logistic") {
     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
@@ -126,6 +128,10 @@ get_fit <- function(hcrmode = c(
   if (hcrmode == "spline") {
     lower <- rep(0, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
+  }
+  if (hcrmode == "rect") {
+    lower <- c(0, 0, 0)
+    upper <- c(1, Inf, 1)
   }
   if (hcrmode == "db_logistic") {
     lower <- c(-Inf, 0, -Inf, 0, -Inf)
@@ -327,6 +333,24 @@ opt[[2]]
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
+seq1(0) = 0; 
+vulb <- seq(from = 0, to =3, by = 0.05)
+par0 <- 0.23
+par1 <- 0.56
+par2 <- 1
+Ut <- par0*(vulb-par1)/(par2 - par1)
+plot(Ut~vulb)  
+seq1 <- c(0, Ut)
+
+seq1(1) = par(0)*(vulb-par(1))/(par(2) - par(1)); 
+seq2(0) = par(0); 
+seq2(1) = max(seq1);
+
+Type out = min(seq2); 
+return out;
+
+
+
 # Notes:
 # logit linear appears unstable for utility
 # 
@@ -422,6 +446,11 @@ if (hcrmode == "logit-linear") {
   lower <- c(-Inf, -Inf, -Inf)
   upper <- c(Inf, 100, Inf)
 }
+if (hcrmode == "rect") {
+  lower <- c(-Inf, -Inf, 0)
+  upper <- c(Inf, Inf, 1)
+}
+
 if (!"om_hcr" %in% names(getLoadedDLLs())) {
   dyn.load(TMB::dynlib("src/om_hcr"))
 }
@@ -429,17 +458,25 @@ if (!"om_hcr" %in% names(getLoadedDLLs())) {
 tmb_pars <- list(par = c(0.2, 0.3, 0.6))
 tmb_pars <- list(par = c(0.2, 0.03, 0.06))
 tmb_pars <- list(par = c(0.2, 0.7, 0.8))
-
+tmb_pars <- list(par = c(0.24, 0.1, 0.9))
 
 
 obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 opt$convergence
 opt$objective
+tmb_pars$par <- opt$par
+
+
+
+
+obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
+opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
+
 
 plot(obj$report(opt$par)$`ut`~obj$report(opt$par)$`vulb`)
 
-
+sdreport(obj)
 opt <- get_fit(hcrmode = "rect", objmode = "yield")
 opt[[1]]$obj[1]
 opt[[2]]

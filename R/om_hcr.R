@@ -111,7 +111,7 @@ get_fit <- function(hcrmode = c(
   } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 2))
   } else if (hcrmode == "dfo") {
-    tmb_pars <- list(par = rep(0.1, 3)) # just a filler for dfo policy
+    tmb_pars <- list(par = rep(0.1, 3)) # not estimated, just a filler for dfo policy
   } else if (hcrmode == "logit") {
     tmb_pars <- list(par = rep(0, 3))
   } else if (hcrmode == "logit-linear") {
@@ -282,7 +282,8 @@ utility <- dat %>%
     criterion
   ) %>%
   summarise(
-    obj = unique(obj) / max(dat$obj), hcr = unique(hcr),
+    obj = format(round(unique(obj) / max(dat$obj), 2), nsmall = 2),
+    hcr = unique(hcr),
     convergence = unique(convergence), pdHess = unique(pdHess),
     criterion = unique(criterion)
   ) %>%
@@ -310,21 +311,28 @@ yield <- dat %>%
     criterion
   ) %>%
   summarise(
-    obj = unique(obj) / max(dat$obj), hcr = unique(hcr),
+    obj = format(round(unique(obj) / max(dat$obj), 2), nsmall = 2), 
+    hcr = unique(hcr),
     convergence = unique(convergence), pdHess = unique(pdHess),
     criterion = unique(criterion)
   ) %>%
   arrange(desc(obj))
-
-utility
 yield
 
 ################################################################################
 # testing
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+opt <- get_fit(hcrmode = "dfo", objmode = "yield")
+dfo <- opt[[1]]$obj[1]
+
 opt <- get_fit(hcrmode = "rect", objmode = "yield")
-opt[[1]]$obj[1]
+unique(opt[[1]]$convergence)
+unique(opt[[1]]$pdHess)
+rect <- opt[[1]]$obj[1]
+
+dfo
+rect
 
 plot(opt[[1]]$Ut~opt[[1]]$Vulb)
 

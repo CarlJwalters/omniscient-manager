@@ -103,7 +103,7 @@ get_fit <- function(hcrmode = c(
       tmb_pars <- list(par = c(0.02, 0.01, 0.1))
     }
     if (objmode == "yield") {
-      tmb_pars <- list(par = c(0.2, 0.3, 0.9))
+      tmb_pars <- list(par = c(Umsy, 0.4*Bmsy, 0.8*Bmsy))
     }
   } else if (hcrmode == "db_logistic") {
     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
@@ -131,7 +131,7 @@ get_fit <- function(hcrmode = c(
   }
   if (hcrmode == "rect") {
     lower <- c(0, 0, 0)
-    upper <- c(1, Inf, 1)
+    upper <- c(1, Inf, Inf)
   }
   if (hcrmode == "db_logistic") {
     lower <- c(-Inf, 0, -Inf, 0, -Inf)

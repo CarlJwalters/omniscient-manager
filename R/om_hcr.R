@@ -221,6 +221,7 @@ Umsy <- msy <- 0
 
 # stochastic bmsy,umsy calculations to get U*
 for (i in 1:length(Useq)) {
+  for(t in 1:length(sim_dat$dat$recmult)){
   Req <- Yeq <- sbrf <- ypr <- 0
   su <- 1
   for (a in 1:length(ages)) {
@@ -232,14 +233,14 @@ for (i in 1:length(Useq)) {
     su <- su * s * (1 - Useq[i] * vul[a])
   }
   Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
-  Yeq <- Req * ypr
+  Yeq <- Req * sim_dat$dat$recmult[t] * ypr
   if (Yeq > msy) {
     msy <- Yeq
     Umsy <- Useq[i]
     Bmsy <- msy / Umsy
+   }
   }
 }
-Umsy
 
 Bo <- sum(Lo*wt*ro)
 Bo*c(0.3, 0.5) # kronlund way
@@ -343,8 +344,6 @@ rect
 plot(opt[[1]]$Ut~opt[[1]]$Vulb, ylim = c(0, 1))
 points(opt[[1]]$Ut~opt[[1]]$Vulb, col = "blue")
 points(opt[[1]]$Ut~opt[[1]]$Vulb, col = "red")
-
-0.2908730 0.4949049 1.4915153
 
 opt[[2]]
 

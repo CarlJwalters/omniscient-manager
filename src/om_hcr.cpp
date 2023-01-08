@@ -84,9 +84,9 @@ template <class Type>
 Type ut_dfo(vector<Type> dfopar, Type vulb)
 { 
   Type Umsy = dfopar(0);
-  Type Bmsy = dfopar(1);
-  Type blrp = 0.4*Bmsy; 
-  Type ulrp = 0.8*Bmsy; 
+  Type Bo = dfopar(1);
+  Type blrp = 0.3*Bo; 
+  Type ulrp = 0.5*Bo; 
   Type out = Umsy * (vulb - blrp) / (ulrp - blrp); 
   if (out < 0){out = 0;}
   if (out > Umsy){out = Umsy;}

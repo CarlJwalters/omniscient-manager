@@ -86,7 +86,7 @@ get_fit <- function(hcrmode = c(
       hcrmode == "dfo" ~ 8
     ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
-    dfopar = c(Umsy, Bmsy),
+    dfopar = c(Umsy, Bo),
     vmult = sim_dat$vmult
   )
   if (pbig > 0.4) {
@@ -219,6 +219,7 @@ ln_ar <- log(reca)
 Useq <- seq(from = 0.01, to = 1, length.out = 100)
 Umsy <- msy <- 0
 
+# stochastic bmsy,umsy calculations to get U*
 for (i in 1:length(Useq)) {
   Req <- Yeq <- sbrf <- ypr <- 0
   su <- 1
@@ -238,8 +239,11 @@ for (i in 1:length(Useq)) {
     Bmsy <- msy / Umsy
   }
 }
-Bmsy
 Umsy
+
+Bo <- sum(Lo*wt*ro)
+Bo*c(0.3, 0.5) # kronlund way
+Bmsy*c(0.4, 0.8) # old way
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -331,10 +335,16 @@ unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 rect <- opt[[1]]$obj[1]
 
+opt <- get_fit(hcrmode = "linear", objmode = "yield")
+
 dfo
 rect
 
-plot(opt[[1]]$Ut~opt[[1]]$Vulb)
+plot(opt[[1]]$Ut~opt[[1]]$Vulb, ylim = c(0, 1))
+points(opt[[1]]$Ut~opt[[1]]$Vulb, col = "blue")
+points(opt[[1]]$Ut~opt[[1]]$Vulb, col = "red")
+
+0.2908730 0.4949049 1.4915153
 
 opt[[2]]
 

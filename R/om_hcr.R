@@ -221,7 +221,6 @@ Umsy <- msy <- 0
 
 # stochastic bmsy,umsy calculations to get U*
 for (i in 1:length(Useq)) {
-  for(t in 1:length(sim_dat$dat$recmult)){
   Req <- Yeq <- sbrf <- ypr <- 0
   su <- 1
   for (a in 1:length(ages)) {
@@ -233,13 +232,12 @@ for (i in 1:length(Useq)) {
     su <- su * s * (1 - Useq[i] * vul[a])
   }
   Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
-  Yeq <- Req * sim_dat$dat$recmult[t] * ypr
+  Yeq <- Req * ypr
   if (Yeq > msy) {
     msy <- Yeq
     Umsy <- Useq[i]
     Bmsy <- msy / Umsy
    }
-  }
 }
 
 Bo <- sum(Lo*wt*ro)
@@ -382,7 +380,7 @@ return out;
 
 # Debugging junk: 
 objmode = "yield"
-hcrmode = "rect"
+hcrmode = "linear"
 
 tmb_data <- list(
   n_year = length(years),
@@ -415,7 +413,8 @@ tmb_data <- list(
   ),
   knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
   dfopar = c(Umsy, Bmsy),
-  vmult = exp(sd_survey * rnorm(length(years)) - 0.5 * (sd_survey)^2)
+  vmult = exp(sd_survey * rnorm(length(years)) - 0.5 * (sd_survey)^2), 
+  useq = seq(from = 0, to = 1, by = 0.01)
 )
 if (hcrmode == "OM") {
   tmb_pars <- list(par = rep(0.1, length(years)))
@@ -472,13 +471,16 @@ if (!"om_hcr" %in% names(getLoadedDLLs())) {
   dyn.load(TMB::dynlib("src/om_hcr"))
 }
 
-tmb_pars <- list(par = c(0.2, 0.3, 0.6))
-tmb_pars <- list(par = c(0.2, 0.03, 0.06))
-tmb_pars <- list(par = c(0.2, 0.7, 0.8))
-tmb_pars <- list(par = c(0.24, 0.1, 0.9))
-
 
 obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
+
+obj$simulate()$`umay`
+obj$simulate()$`bmay`
+obj$simulate()$`bo`
+obj$simulate()$`may`
+
+
+
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 opt$convergence
 opt$objective

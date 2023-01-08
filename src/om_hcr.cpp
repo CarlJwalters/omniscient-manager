@@ -114,7 +114,8 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(knots);       // spline knots
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
   DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (N(0,1)) - 0.5 * (sd_survey)^2)
-
+  DATA_VECTOR(useq);        // sequence from 0 to 1 for stochastic Umsy estimation
+  
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
   vector<Type> vul(n_age);
@@ -224,6 +225,42 @@ Type objective_function<Type>::operator()()
     n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
   }
   obj -= utility.sum();
+  
+  // stochastic estimation of umay, bo, bmay
+  SIMULATE{ 
+    Type umay = 0; 
+    Type bmay = 0; 
+    Type may = 0; 
+    Type bo = 0; 
+    for(int i = 0; i < useq.size(); i++){
+      Type ut = useq(i); 
+      for(int t = 0; t < n_year; t++){
+        if(t%100==0){n = rinit*n;}
+        vulb(t) = (vul*n*wt).sum();  
+        vbobs(t) = vulb(t)*vmult(t);  
+        ssb(t) = (mwt*n).sum();                                          
+        abar(t) = (vul*ages*n).sum() / sum(n);                             
+        wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
+        yield(t) = ut*vulb(t);                                      
+        n = s*n*(1-vul*ut); 
+        n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
+        for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
+        n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
+      }
+      Type yield_total = yield.sum()/yield.size();
+      if(ut == 0){ // unfished state
+        bo = vulb.sum()/vulb.size(); 
+      } else if (yield_total > may){  
+        may = yield_total; 
+        umay = ut; 
+        bmay = may / umay; 
+      }
+    }
+    REPORT(may); 
+    REPORT(umay); 
+    REPORT(bmay); 
+    REPORT(bo); 
+  }
   
   REPORT(ssb);
   REPORT(yield);

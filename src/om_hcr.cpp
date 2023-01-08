@@ -247,10 +247,10 @@ Type objective_function<Type>::operator()()
         for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
         n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
       }
-      Type yield_total = yield.sum()/yield.size();
+      Type avg_yield = yield.sum()/yield.size();
       if(ut == 0){ // unfished state
         bo = vulb.sum()/vulb.size(); 
-      } else if (yield_total > may){  
+      } else if (avg_yield > may){  
         may = yield_total; 
         umay = ut; 
         bmay = may / umay; 

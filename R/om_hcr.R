@@ -477,9 +477,6 @@ obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
 obj$simulate()$`umay`
 obj$simulate()$`bmay`
 obj$simulate()$`bo`
-obj$simulate()$`may`
-
-
 
 opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
 opt$convergence

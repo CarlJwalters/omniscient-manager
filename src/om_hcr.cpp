@@ -234,13 +234,10 @@ Type objective_function<Type>::operator()()
     Type bo = 0; 
     for(int i = 0; i < useq.size(); i++){
       Type ut = useq(i); 
+      n = ninit; 
       for(int t = 0; t < n_year; t++){
-        if(t%100==0){n = rinit*n;}
         vulb(t) = (vul*n*wt).sum();  
-        vbobs(t) = vulb(t)*vmult(t);  
         ssb(t) = (mwt*n).sum();                                          
-        abar(t) = (vul*ages*n).sum() / sum(n);                             
-        wbar(t) = (vul*n*wt).sum() / (n*wt).sum(); 
         yield(t) = ut*vulb(t);                                      
         n = s*n*(1-vul*ut); 
         n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
@@ -251,7 +248,7 @@ Type objective_function<Type>::operator()()
       if(ut == 0){ // unfished state
         bo = vulb.sum()/vulb.size(); 
       } else if (avg_yield > may){  
-        may = yield_total; 
+        may = avg_yield; 
         umay = ut; 
         bmay = may / umay; 
       }

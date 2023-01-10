@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Harvest strategies for fisheries with highly variable recruitment dynamics
-#                  Cahill and Walters Fall 2022
+#                     Cahill and Walters Fall 2022
 # ------------------------------------------------------------------------------
 # load required packages
 
@@ -86,8 +86,9 @@ get_fit <- function(hcrmode = c(
       hcrmode == "dfo" ~ 8
     ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
-    dfopar = c(Umsy, Bo),
-    vmult = sim_dat$vmult
+    dfopar = c(1000,1000), # dummy values, these are set using .cpp call below
+    vmult = sim_dat$vmult, 
+    useq = seq(from = 0, to = 1.0, by = 0.01)
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -107,7 +108,6 @@ get_fit <- function(hcrmode = c(
     }
   } else if (hcrmode == "db_logistic") {
     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
-    # tmb_pars <- list(par = c(0.3, 10, 0.7, 10, 0.6))
   } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 2))
   } else if (hcrmode == "dfo") {
@@ -145,6 +145,11 @@ get_fit <- function(hcrmode = c(
     dyn.load(TMB::dynlib("src/om_hcr"))
   }
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
+  if(any(tmb_data$dfopar == 1000)){
+    tmb_data$dfopar[1] = obj$simulate()$`umay`
+    tmb_data$dfopar[2] = obj$simulate()$`bo`
+  }
+    
   if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
     ctr <- 1
@@ -243,7 +248,8 @@ for (i in 1:length(Useq)) {
 Bo <- sum(Lo*wt*ro)
 Bo*c(0.3, 0.5) # kronlund way
 Bmsy*c(0.4, 0.8) # old way
-
+Bmsy
+Umsy
 #-------------------------------------------------------------------------------
 # compile the cpp
 cppfile <- "src/om_hcr.cpp"

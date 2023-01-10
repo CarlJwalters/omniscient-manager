@@ -236,7 +236,7 @@ for (i in 1:length(Useq)) {
     ypr <- ypr + su * Useq[i] * vul[a] * wt[a]
     su <- su * s * (1 - Useq[i] * vul[a])
   }
-  Req <- (exp(ln_ar + 0.5 * sdr^2) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
+  Req <- (exp(ln_ar) * sbrf - 1.0) / (recb * sbrf) # Beverton-Holt prediction
   Yeq <- Req * ypr
   if (Yeq > msy) {
     msy <- Yeq

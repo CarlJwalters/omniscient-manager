@@ -144,12 +144,12 @@ get_fit <- function(hcrmode = c(
   if (!"om_hcr" %in% names(getLoadedDLLs())) {
     dyn.load(TMB::dynlib("src/om_hcr"))
   }
-  obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
-  if(any(tmb_data$dfopar == 1000)){
+  if(any(tmb_data$dfopar == 1000)){ 
+    obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
     tmb_data$dfopar[1] = obj$simulate()$`umay`
     tmb_data$dfopar[2] = obj$simulate()$`bo`
   }
-    
+  obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
   if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
     ctr <- 1

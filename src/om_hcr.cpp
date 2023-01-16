@@ -157,13 +157,14 @@ Type objective_function<Type>::operator()()
   vector<Type> wbar(n_year);
   vector<Type> yield(n_year);
   vector<Type> utility(n_year);
+  vector<Type> rec(n_year);
   vector<Type> ssb(n_year);
   vector<Type> vulb(n_year);
   vector<Type> vbobs(n_year);
   vector<Type> ut(n_year);
   abar.setZero();wbar.setZero(); yield.setZero(); 
-  utility.setZero(); ssb.setZero(); vulb.setZero(); 
-  ut.setZero(); vbobs.setZero(); 
+  utility.setZero(); rec.setZero(); ssb.setZero(); 
+  vulb.setZero(); ut.setZero(); vbobs.setZero(); 
   
   n = ninit; 
   Type obj = 0;
@@ -222,7 +223,8 @@ Type objective_function<Type>::operator()()
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
-    n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
+    n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);   
+    rec(t) = n(0); 
   }
   obj -= utility.sum();
   
@@ -242,7 +244,7 @@ Type objective_function<Type>::operator()()
         n = s*n*(1-vul*ut); 
         n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
         for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        
-        n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t);             
+        n(0) = reca*ssb(t) / (1 + recb*ssb(t))*recmult(t); 
       }
       Type avg_yield = yield.sum()/yield.size();
       if(ut == 0){ // unfished state
@@ -259,6 +261,7 @@ Type objective_function<Type>::operator()()
     REPORT(bo); 
   }
   
+  REPORT(rec); 
   REPORT(ssb);
   REPORT(yield);
   REPORT(vulb);

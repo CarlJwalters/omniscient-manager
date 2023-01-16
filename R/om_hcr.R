@@ -89,7 +89,8 @@ get_fit <- function(hcrmode = c(
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
     dfopar = c(1000, 1000), # dummy values, these are set using .cpp call below
     vmult = sim_dat$vmult,
-    useq = seq(from = 0, to = 1.0, by = 0.01)
+    useq = seq(from = 0, to = 1.0, by = 0.01), 
+    modulus = n_year + 1
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -108,11 +109,11 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
   } else if (hcrmode == "db-logistic") {
     if(objmode == "utility"){
-     tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
+      tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
     }
     if(objmode == "yield"){
-      tmb_pars <- list(par = c(0.2, 100, rep(0.5, 3)))
-    }
+      tmb_pars <- list(par = c(1.0, 50, 0.75, 53, 0.72))
+    }  
   } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 2))
   } else if (hcrmode == "dfo") {
@@ -139,8 +140,8 @@ get_fit <- function(hcrmode = c(
     upper <- c(1, Inf, Inf)
   }
   if (hcrmode == "db-logistic") {
-    lower <- c(-Inf, 0, -Inf, 0, -Inf)
-    upper <- c(1, Inf, Inf, Inf, Inf)
+    lower <- c(-Inf, -Inf, -Inf, -Inf, -Inf)
+    upper <- c(Inf, Inf, Inf, Inf, Inf)
   }
   if (hcrmode == "logit-linear") {
     lower <- c(-Inf, -Inf, -Inf)
@@ -159,6 +160,11 @@ get_fit <- function(hcrmode = c(
   if(objmode == "yield" && hcrmode == "rect"){
     tmb_pars <- list(par = c(umay, 0.3 * bo, 0.5 * bo)) # overwrite dummy values
   }
+  # map <- ifelse(objmode == "yield" && hcrmode == "db-logistic", 
+  #        list(`par(1)` = factor(NA)), 
+  #        NULL
+  # )
+  # browser()
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
   if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -234,31 +240,23 @@ rules <- c(
 ################################################################################
 # # testing
 # set.seed(1)
-pbig <- 0.01
-sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+pbig <- 0.05
+sd_survey <- 1e-9
+set.seed(1)
 
-png("plots/rules_pbig_01.png",
-  width = 10, height = 4.5, units = "in", res = 1200
-)
-par(mfrow = c(1, 2))
+sim <- matrix(NA, nrow=20, ncol = 7)
+for(i in 1:20){
+ sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+ opt <- get_fit(hcrmode = "db-logistic", objmode = "yield") 
+ sim[i,] <- cbind(t(opt[[2]]), unique(opt[[1]]$convergence), unique(opt[[1]]$pdHess))
+}
 
-# utility
-opt <- get_fit(hcrmode = "rect", objmode = "yield")
-opt <- get_fit(hcrmode = "db_logistic", objmode = "yield")
+unique(opt[[1]]$convergence)
+unique(opt[[1]]$pdHess)
 
-opt <- get_fit(hcrmode = "OM", objmode = "utility")
-# 
-# opt[[1]]$convergence
-# opt[[1]]$pdHess
-# 
-# 
-# plot(opt[[1]]$Vulb)
-# 
-# 
-# plot(opt[[1]]$Ut ~ opt[[1]]$Vulb,
-#   ylim = c(0, 1), ylab = "Exploitation rate",
-#   xlab = "Vulnerable biomass", main = "yield"
-# )
+opt[[2]]
+
+
 # points(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 # plot(opt[[1]]$Vulb, type = "l"
 # )
@@ -395,7 +393,7 @@ opt <- get_fit(hcrmode = "OM", objmode = "utility")
 
 ##############################################################################
 # utility
-sd_survey <- 0.15
+sd_survey <- 1e-9
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
@@ -429,15 +427,16 @@ utility <- dat %>%
 utility
 
 utility$name <- paste0(utility$hcr, " ", utility$obj)
-
+breaks <-  seq(from = 1000, to = 1200, length.out = 6)
 p <- dat %>% select(Ut, hcr, year) %>%
-  filter(year >= 750, year <= 1250) %>%
+  filter(year >= 1000, year <= 1200) %>%
   mutate(hcr = fct_relevel(hcr, utility$hcr)) %>%
   ggplot(aes(x = year, y = Ut, color = hcr)) + 
   ggtitle("HARA utility") + 
   xlab("Year of simulation") + 
+  ylim(0,1) + 
   ylab(expression(Exploitation~rate~U[t])) + 
-  scale_x_continuous(breaks = c(750, 850, 950, 1050, 1150, 1250)) + 
+  scale_x_continuous(breaks = breaks) + 
   geom_line(position = position_dodge(width = 0.2)) + 
   ggqfc::theme_qfc() + 
   theme(plot.title = element_text(hjust = 0.5)) + 
@@ -478,13 +477,13 @@ yield <- dat %>%
 yield$name <- paste0(yield$hcr, " ", yield$obj)
 
 p1 <- dat %>% select(Ut, hcr, year) %>%
-  filter(year >= 750, year <= 1250) %>%
+  filter(year >= 1000, year <= 1200) %>%
   mutate(hcr = fct_relevel(hcr, yield$hcr)) %>%
   ggplot(aes(x = year, y = Ut, color = hcr)) + 
   ggtitle("Maximum average yield") + 
   xlab("Year of simulation") + 
   ylab(expression(Exploitation~rate~U[t])) + 
-  scale_x_continuous(breaks = c(750, 850, 950, 1050, 1150, 1250)) + 
+  scale_x_continuous(breaks = breaks) + 
   geom_line(position = position_dodge(width = 0.2)) + 
   ggqfc::theme_qfc() + 
   theme(plot.title = element_text(hjust = 0.5)) + 
@@ -494,7 +493,7 @@ p1 <- dat %>% select(Ut, hcr, year) %>%
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
-ggsave("plots/all-rules-performance-cv-015.pdf", width = 8, height = 7, scale = 0.9)
+ggsave("plots/all-rules-performance.pdf", width = 8, height = 7, scale = 0.9)
 
 
 

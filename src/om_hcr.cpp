@@ -115,6 +115,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(dfopar);      // Umsy, Bmsy
   DATA_VECTOR(vmult);       // survey error = exp(sd_survey * (N(0,1)) - 0.5 * (sd_survey)^2)
   DATA_VECTOR(useq);        // sequence from 0 to 1 for stochastic Umsy estimation
+  DATA_INTEGER(modulus); 
   
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -170,7 +171,7 @@ Type objective_function<Type>::operator()()
   Type obj = 0;
 
   for(int t = 0; t < n_year; t++){
-    if(t%100==0){n = rinit*n;}
+    if(t%modulus==0){n = rinit*n;}
     vulb(t) = (vul*n*wt).sum();  
     vbobs(t) = vulb(t)*vmult(t);  
     ssb(t) = (mwt*n).sum();                                          

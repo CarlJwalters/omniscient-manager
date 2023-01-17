@@ -11,7 +11,8 @@ library(ggqfc)
 library(tidyverse)
 library(future)
 library(furrr)
-library(ggborderline)
+install.packages("MetBrewer")
+library(MetBrewer)
 
 # ------------------------------------------------------------------------------
 get_devs <- function(pbig, Rbig, sdr, sd_survey) {
@@ -80,17 +81,16 @@ get_fit <- function(hcrmode = c(
       hcrmode == "linear" ~ 1,
       hcrmode == "spline" ~ 2,
       hcrmode == "rect" ~ 3,
-      hcrmode == "db-logistic" ~ 4,
-      hcrmode == "exponential" ~ 5,
-      hcrmode == "logit" ~ 6,
-      hcrmode == "logit-linear" ~ 7,
-      hcrmode == "dfo" ~ 8
+      hcrmode == "exponential" ~ 4,
+      hcrmode == "logit" ~ 5,
+      hcrmode == "logit-linear" ~ 6,
+      hcrmode == "dfo" ~ 7
     ),
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
     dfopar = c(1000, 1000), # dummy values, these are set using .cpp call below
     vmult = sim_dat$vmult,
     useq = seq(from = 0, to = 1.0, by = 0.01), 
-    modulus = n_year + 1
+    modulus = n_year + 1 # set to value above nyear means modulus collapse shut off
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -107,21 +107,14 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
     tmb_pars <- list(par = c(0.02, 0.01, 0.1))
-  } else if (hcrmode == "db-logistic") {
-    if(objmode == "utility"){
-      tmb_pars <- list(par = c(0.2, rep(0.5, 4)))
-    }
-    if(objmode == "yield"){
-      tmb_pars <- list(par = c(1.0, 50, 0.75, 53, 0.72))
-    }  
   } else if (hcrmode == "exponential") {
     tmb_pars <- list(par = rep(0.1, 2))
   } else if (hcrmode == "dfo") {
     tmb_pars <- list(par = rep(0.1, 3)) # not estimated, just a filler for dfo policy
   } else if (hcrmode == "logit") {
-    tmb_pars <- list(par = rep(0, 3))
+    tmb_pars <- list(par = c(-3, 0, 3))
   } else if (hcrmode == "logit-linear") {
-    tmb_pars <- list(par = c(0.6, 1, 0.7))
+    tmb_pars <- list(par = c(0.6, 1, 0.7, 0.75))
   }
   if (hcrmode == "OM") {
     lower <- rep(0.0001, length(years))
@@ -139,13 +132,9 @@ get_fit <- function(hcrmode = c(
     lower <- c(0, 0, 0)
     upper <- c(1, Inf, Inf)
   }
-  if (hcrmode == "db-logistic") {
-    lower <- c(-Inf, -Inf, -Inf, -Inf, -Inf)
-    upper <- c(Inf, Inf, Inf, Inf, Inf)
-  }
   if (hcrmode == "logit-linear") {
-    lower <- c(-Inf, -Inf, -Inf)
-    upper <- c(Inf, 100, Inf)
+    lower <- c(-Inf, -Inf, -Inf, -Inf)
+    upper <- c(Inf, 100, Inf, 1)
   }
   if (!"om_hcr" %in% names(getLoadedDLLs())) {
     dyn.load(TMB::dynlib("src/om_hcr"))
@@ -160,11 +149,6 @@ get_fit <- function(hcrmode = c(
   if(objmode == "yield" && hcrmode == "rect"){
     tmb_pars <- list(par = c(umay, 0.3 * bo, 0.5 * bo)) # overwrite dummy values
   }
-  # map <- ifelse(objmode == "yield" && hcrmode == "db-logistic", 
-  #        list(`par(1)` = factor(NA)), 
-  #        NULL
-  # )
-  # browser()
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
   if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -232,8 +216,9 @@ pbig <- 0.07 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 # run a few rules
 rules <- c(
   "OM", "linear",
-  "spline", "rect", "db-logistic",
-  "exponential", "logit", "logit-linear", "dfo"
+  "spline", "rect", 
+  "exponential", "logit", 
+  "logit-linear", "dfo"
 )
 
 
@@ -244,20 +229,22 @@ pbig <- 0.05
 sd_survey <- 1e-9
 set.seed(1)
 
-sim <- matrix(NA, nrow=20, ncol = 7)
+sim <- matrix(NA, nrow=20, ncol = 4)
 for(i in 1:20){
  sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
- opt <- get_fit(hcrmode = "db-logistic", objmode = "yield") 
+ opt <- get_fit(hcrmode = "linear", objmode = "yield") 
  sim[i,] <- cbind(t(opt[[2]]), unique(opt[[1]]$convergence), unique(opt[[1]]$pdHess))
 }
-
+set.seed(12)
+sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+opt <- get_fit(hcrmode = "logit-linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
 opt[[2]]
+opt[[1]]$obj
 
-
-# points(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 # plot(opt[[1]]$Vulb, type = "l"
 # )
 # points(opt[[1]]$Ut, col = "red", type = "l"
@@ -393,7 +380,7 @@ opt[[2]]
 
 ##############################################################################
 # utility
-sd_survey <- 1e-9
+sd_survey <- 0.5
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
@@ -427,47 +414,38 @@ utility <- dat %>%
 utility
 
 utility$name <- paste0(utility$hcr, " ", utility$obj)
-breaks <-  seq(from = 1000, to = 1200, length.out = 6)
-p <- dat %>% select(Ut, hcr, year) %>%
-  filter(year >= 1000, year <= 1200) %>%
-  mutate(hcr = fct_relevel(hcr, utility$hcr)) %>%
-  ggplot(aes(x = year, y = Ut, color = hcr)) + 
-  ggtitle("HARA utility") + 
-  xlab("Year of simulation") + 
-  ylim(0,1) + 
-  ylab(expression(Exploitation~rate~U[t])) + 
-  scale_x_continuous(breaks = breaks) + 
-  geom_line(position = position_dodge(width = 0.2)) + 
-  ggqfc::theme_qfc() + 
-  theme(plot.title = element_text(hjust = 0.5)) + 
-  scale_color_brewer(palette = "Paired", labels=utility$name) + 
-  geom_borderline(linewidth = 0.95) + 
-  guides(color=guide_legend(title="Relative policy \nperformance"))
-p
-
+utility$color <- case_when(
+  utility$hcr == "OM" ~ "#67322e", 
+  utility$hcr == "logit" ~ "#99610a",
+  utility$hcr == "spline" ~ "#c38f16",
+  utility$hcr == "linear" ~ "#6e948c",
+  utility$hcr == "rect" ~ "#2c6b67",
+  utility$hcr == "dfo" ~ "#122c43", 
+  utility$hcr == "exponential" ~ "#175449"
+)
 # now for yield
 system.time({
-  dat <- NULL
+  dat1 <- NULL
   for (i in rules) {
     if (i == "spline" || i == "exponential") {
       next
     }
     opt <- get_fit(hcrmode = i, objmode = "yield")
-    if (is.null(dat)) {
-      dat <- opt[[1]]
+    if (is.null(dat1)) {
+      dat1 <- opt[[1]]
     } else {
-      dat <- rbind(dat, opt[[1]])
+      dat1 <- rbind(dat1, opt[[1]])
     }
   }
 })
 
-yield <- dat %>%
+yield <- dat1 %>%
   group_by(
     hcr, obj, convergence, pdHess,
     criterion
   ) %>%
   summarise(
-    obj = format(round(unique(obj) / max(dat$obj), 2), nsmall = 2),
+    obj = format(round(unique(obj) / max(dat1$obj), 2), nsmall = 2),
     hcr = unique(hcr),
     convergence = unique(convergence), pdHess = unique(pdHess),
     criterion = unique(criterion)
@@ -475,8 +453,33 @@ yield <- dat %>%
   arrange(desc(obj))
 
 yield$name <- paste0(yield$hcr, " ", yield$obj)
+yield$color <- case_when(
+  yield$hcr == "OM" ~ "#67322e", 
+  yield$hcr == "logit" ~ "#99610a",
+  yield$hcr == "logit-linear" ~ "#c38f16",
+  yield$hcr == "linear" ~ "#6e948c",
+  yield$hcr == "rect" ~ "#2c6b67",
+  yield$hcr == "dfo" ~ "#122c43"
+  
+)
 
-p1 <- dat %>% select(Ut, hcr, year) %>%
+breaks <-  seq(from = 1000, to = 1200, length.out = 6)
+p <- dat %>% select(Ut, hcr, year) %>%
+  filter(year >= 1000, year <= 1200) %>%
+  mutate(hcr = fct_relevel(hcr, utility$hcr)) %>%
+  ggplot(aes(x = year, y = Ut, color = hcr)) + 
+  ggtitle("HARA utility") + 
+  xlab("Year of simulation") + 
+  ylab(expression(Exploitation~rate~U[t])) + 
+  scale_x_continuous(breaks = breaks) + 
+  geom_line(position = position_dodge(width = 1), size = 0.75) + 
+  ggqfc::theme_qfc() + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_color_manual(values = utility$color, labels=utility$name) + 
+  guides(color=guide_legend(title="Relative policy \nperformance"))
+#p
+
+p1 <- dat1 %>% select(Ut, hcr, year) %>%
   filter(year >= 1000, year <= 1200) %>%
   mutate(hcr = fct_relevel(hcr, yield$hcr)) %>%
   ggplot(aes(x = year, y = Ut, color = hcr)) + 
@@ -484,22 +487,19 @@ p1 <- dat %>% select(Ut, hcr, year) %>%
   xlab("Year of simulation") + 
   ylab(expression(Exploitation~rate~U[t])) + 
   scale_x_continuous(breaks = breaks) + 
-  geom_line(position = position_dodge(width = 0.2)) + 
+  geom_line(position = position_dodge(width = 1), size = 0.75) + 
   ggqfc::theme_qfc() + 
   theme(plot.title = element_text(hjust = 0.5)) + 
-  scale_color_brewer(palette = "Paired", labels=yield$name) + 
-  geom_borderline(linewidth = 0.95) + 
+  scale_color_manual(values = yield$color, labels=yield$name) + 
   guides(color=guide_legend(title="Relative policy \nperformance"))
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
-ggsave("plots/all-rules-performance.pdf", width = 8, height = 7, scale = 0.9)
+ggsave("plots/all-rules-performance-cv-050.pdf", width = 7, height = 6, scale = 0.9)
 
 
-
-
-opt <- get_fit(hcrmode = "db_logistic", objmode = "utility")
-points(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
+opt <- get_fit(hcrmode = "linear", objmode = "yield")
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 
 opt <- get_fit(hcrmode = "linear", objmode = "utility")
 points(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "red")

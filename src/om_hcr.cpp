@@ -43,14 +43,6 @@ Type ut_rect(vector<Type> par, Type vulb)
   return out;
 }
 
-// double logistic
-template <class Type> 
-Type ut_db_logistic(vector<Type> par, Type wbar, Type vulb)
-{ 
-  Type out = par(0) / ((1 + exp(-par(1)*(vulb - par(2))))*(1 + exp(-par(3)*(wbar-par(4)))));      
-  return out;
-}  
-
 // exponential form 
 template <class Type>
 Type ut_exp(vector<Type> par, Type vulb)
@@ -74,7 +66,7 @@ Type ut_logit_linear(vector<Type> par, Type wbar, Type vulb)
   vector<Type> seq(2);
   seq.setZero();
   seq(0) = 0;
-  seq(1) = (vulb - par(0))/vulb/(1 + exp(-par(1)*(wbar - par(2)))); 
+  seq(1) = par(3)*(vulb - par(0))/vulb/(1 + exp(-par(1)*(wbar - par(2)))); 
   Type out = max(seq);
   return out; 
 }
@@ -195,22 +187,18 @@ Type objective_function<Type>::operator()()
       break;
       
       case 4:
-        ut(t) = ut_db_logistic(par, wbar(t), vbobs(t));
-      break;
-      
-      case 5:
         ut(t) = ut_exp(par, vbobs(t));
       break;
       
-      case 6:
+      case 5:
         ut(t) = ut_logit(par, wbar(t), vbobs(t));
       break;
       
-      case 7:
+      case 6:
         ut(t) = ut_logit_linear(par, wbar(t), vbobs(t));
       break;
       
-      case 8:
+      case 7:
         ut(t) = ut_dfo(dfopar, vbobs(t));
       break;
       

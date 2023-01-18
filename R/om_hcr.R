@@ -31,11 +31,13 @@ get_devs <- function(pbig, Rbig, sdr, sd_survey) {
   }
   # generate deviates for vulnerable biomass
   vmult <- exp(sd_survey * rnorm(n_year) - 0.5 * (sd_survey)^2)
+  # generate deviates for quota management
+  umult <- exp(cv_u * rnorm(n_year) - 0.5 * (cv_u)^2)  
   out <- tibble(
     year = 1:n_year,
-    urand, Nrand, recmult
+    urand, Nrand, recmult, umult
   )
-  list(dat = out, vmult = vmult)
+  list(dat = out, vmult = vmult, umult = umult)
 }
 
 # testing recmult
@@ -90,7 +92,10 @@ get_fit <- function(hcrmode = c(
     dfopar = c(1000, 1000), # dummy values, these are set using .cpp call below
     vmult = sim_dat$vmult,
     useq = seq(from = 0, to = 1.0, by = 0.01), 
-    modulus = n_year + 1 # set to value above nyear means modulus collapse shut off
+    modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
+    usequota = usequota, 
+    umax = 1-exp(-2),
+    umult = sim_dat$umult
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -199,6 +204,8 @@ ahv <- 5
 Rbig <- 9
 sdr <- 0.6
 sd_survey <- 1e-6
+cv_u = 0.1
+usequota = 1L
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -237,7 +244,7 @@ for(i in 1:20){
 }
 set.seed(12)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "logit-linear", objmode = "yield") 
+opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
@@ -245,142 +252,9 @@ opt[[2]]
 opt[[1]]$obj
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
-# plot(opt[[1]]$Vulb, type = "l"
-# )
-# points(opt[[1]]$Ut, col = "red", type = "l"
-# )
-# 
-# # utility
-# sd_survey <- 1e-9
-# set.seed(1)
-# sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-# 
-# system.time({
-#   dat <- NULL
-#   for (i in rules) {
-#     if (i == "logit-linear") {
-#       next
-#     }
-#     opt <- get_fit(hcrmode = i, objmode = "utility")
-#     if (is.null(dat)) {
-#       dat <- opt[[1]]
-#     } else {
-#       dat <- rbind(dat, opt[[1]])
-#     }
-#   }
-# })
-# 
-# utility <- dat %>%
-#   group_by(
-#     hcr, obj, convergence, pdHess,
-#     criterion
-#   ) %>%
-#   summarise(
-#     obj = format(round(unique(obj) / max(dat$obj), 2), nsmall = 2),
-#     hcr = unique(hcr),
-#     convergence = unique(convergence), pdHess = unique(pdHess),
-#     criterion = unique(criterion)
-#   ) %>%
-#   arrange(desc(obj))
+#-------------------------------------------------------------------------------
 # utility
-# 
-# exp <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "exponential", year >= 750, year <= 1250)
-# 
-# rect <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "rect", year >= 750, year <= 1250)
-# 
-# dfo <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "dfo", year >= 750, year <= 1250)
-# 
-# p <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "OM", year >= 750, year <= 1250) %>%
-#   ggplot(aes(x = year, y = Ut)) + 
-#   ylim(0,1) + 
-#   ggtitle("HARA utility") +
-#   xlab("Year of Simulation") + 
-#   ylab(expression(Exploitation~rate~U[t])) + 
-#   scale_x_continuous(breaks = c(750, 850, 950, 1050, 1150, 1250)) + 
-#   geom_line(color = "black", size = 0.75, linetype = 1) + 
-#   geom_line(data = exp, aes(x = year , y = Ut), 
-#             color = "blue", size = 0.5, alpha = 0.75) + 
-#   geom_line(data = rect, aes(x = year , y = Ut), 
-#             color = "red", size = 0.5, alpha = 0.75) + 
-#   geom_line(data = dfo, aes(x = year , y = Ut), 
-#             color = "darkgreen", size = 0.75, alpha = 0.8) +
-#   ggqfc::theme_qfc() + 
-#   theme(plot.title = element_text(hjust = 0.5))
-# p
-# #ggsave("plots/ut_utility.pdf", width = 10, height = 5)
-# 
-# # now for yield
-# system.time({
-#   dat <- NULL
-#   for (i in rules) {
-#     if (i == "spline" || i == "exponential") {
-#       next
-#     }
-#     opt <- get_fit(hcrmode = i, objmode = "yield")
-#     if (is.null(dat)) {
-#       dat <- opt[[1]]
-#     } else {
-#       dat <- rbind(dat, opt[[1]])
-#     }
-#   }
-# })
-# 
-# yield <- dat %>%
-#   group_by(
-#     hcr, obj, convergence, pdHess,
-#     criterion
-#   ) %>%
-#   summarise(
-#     obj = format(round(unique(obj) / max(dat$obj), 2), nsmall = 2),
-#     hcr = unique(hcr),
-#     convergence = unique(convergence), pdHess = unique(pdHess),
-#     criterion = unique(criterion)
-#   ) %>%
-#   arrange(desc(obj))
-# yield
-# 
-# logit <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "logit", year >= 750, year <= 1250)
-# 
-# logit_linear <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "logit-linear", year >= 750, year <= 1250)
-# 
-# linear <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "linear", year >= 750, year <= 1250)
-# 
-# dfo <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "dfo", year >= 750, year <= 1250)
-# 
-# p1 <- dat %>% select(Ut, hcr, year) %>%
-#   filter(hcr == "OM", year >= 750, year <= 1250) %>%
-#   ggplot(aes(x = year, y = Ut)) + 
-#   ggtitle("Maximum average yield") + 
-#   xlab("Year of Simulation") + 
-#   ylab(expression(Exploitation~rate~U[t])) + 
-#   scale_x_continuous(breaks = c(750, 850, 950, 1050, 1150, 1250)) + 
-#   geom_line(color = "black", size = 0.75, alpha = 0.8) + 
-#   geom_line(data = logit, aes(x = year , y = Ut), 
-#             color = "blue", size = 0.5, alpha = 0.5) + 
-#   geom_line(data = logit_linear, aes(x = year , y = Ut), 
-#             color = "red", size = 0.5, alpha = 0.75) + 
-#   geom_line(data = dfo, aes(x = year , y = Ut), 
-#             color = "darkgreen", size = 0.75, alpha = 0.8) +
-#   ggqfc::theme_qfc() + 
-#   theme(plot.title = element_text(hjust = 0.5)) 
-# p1
-# #ggsave("plots/ut_yield.pdf", width = 10, height = 5)
-# 
-# both <- cowplot::plot_grid(p1, p, nrow = 2)
-# ggsave("plots/ut_may_hara_750_1250.pdf", width = 8, height = 4, scale = 0.9)
-
-
-##############################################################################
-# utility
-sd_survey <- 0.5
+sd_survey <- 1.5
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
@@ -495,7 +369,7 @@ p1 <- dat1 %>% select(Ut, hcr, year) %>%
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
-ggsave("plots/all-rules-performance-cv-050.pdf", width = 7, height = 6, scale = 0.9)
+ggsave("plots/all-rules-performance-cv-150.pdf", width = 7, height = 6, scale = 0.9)
 
 
 opt <- get_fit(hcrmode = "linear", objmode = "yield")

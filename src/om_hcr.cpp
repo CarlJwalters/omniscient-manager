@@ -214,13 +214,12 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    Type utt = 0; 
     if(usequota){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
      ut(t)= dev*log(exp(umax / dev) + 1) - dev*log(exp(-(tac(t) / vulb(t) - umax)/dev) + 1);
-     utt = ut(t);
     } 
+    Type utt = ut(t);
     if(hcrmode > 0){ut(t) = 1 - pow(umult(t), utt)*(1-utt);}
 
     yield(t) = ut(t)*vulb(t);                                      

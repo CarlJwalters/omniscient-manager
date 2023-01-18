@@ -111,6 +111,7 @@ Type objective_function<Type>::operator()()
   DATA_INTEGER(usequota);   // use a quota?
   DATA_INTEGER(umax);       // cap on implemented ut
   DATA_VECTOR(umult);       // implementation error ut
+  DATA_SCALAR(dev);         // magicks 
   
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -217,7 +218,7 @@ Type objective_function<Type>::operator()()
     if(usequota && hcrmode >0){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
-     ut(t)=0.05*log(exp(umax/0.05)+1)-0.05*log(exp(-(ut(t)-umax)/0.05)+1); 
+     ut(t)=dev*log(exp(umax/dev)+1)-dev*log(exp(-(ut(t)-umax)/dev)+1); 
      ut(t)= 1 - pow(umult(t), ut(t))*(1-ut(t));  
     } 
     yield(t) = ut(t)*vulb(t);                                      

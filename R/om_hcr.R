@@ -95,7 +95,8 @@ get_fit <- function(hcrmode = c(
     modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
     usequota = usequota, 
     umax = 1-exp(-2),
-    umult = sim_dat$umult
+    umult = sim_dat$umult, 
+    dev = 1
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -204,7 +205,7 @@ ahv <- 5
 Rbig <- 9
 sdr <- 0.6
 sd_survey <- 1e-6
-cv_u = 0.1
+cv_u = 0.01
 usequota = 1L
 
 #-------------------------------------------------------------------------------
@@ -244,7 +245,7 @@ for(i in 1:20){
 }
 set.seed(12)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "linear", objmode = "yield") 
+opt <- get_fit(hcrmode = "linear", objmode = "utility") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
@@ -252,6 +253,8 @@ opt[[2]]
 opt[[1]]$obj
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
+opt <- get_fit(hcrmode = "OM", objmode = "yield") 
+
 #-------------------------------------------------------------------------------
 # utility
 sd_survey <- 1.5

@@ -219,10 +219,9 @@ Type objective_function<Type>::operator()()
      ut(t) = tac(t) / vulb(t);
      ut(t)=0.05*log(exp(umax/0.05)+1)-0.05*log(exp(-(ut(t)-umax)/0.05)+1); 
      ut(t)= 1 - pow(umult(t), ut(t))*(1-ut(t));  
-     yield(t) = ut(t)*vulb(t);                                      
-    } else {
-      yield(t) = ut(t)*vulb(t);                                      
-    }
+    } 
+    yield(t) = ut(t)*vulb(t);                                      
+    
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    

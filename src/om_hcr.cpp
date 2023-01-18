@@ -214,7 +214,7 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota){
+    if(usequota && hcrmode >0){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
      ut(t)=0.05*log(exp(umax/0.05)+1)-0.05*log(exp(-(ut(t)-umax)/0.05)+1); 

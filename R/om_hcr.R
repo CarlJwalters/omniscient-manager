@@ -177,6 +177,7 @@ get_fit <- function(hcrmode = c(
     "Wbar" = obj$report()$`wbar`,
     "ssb" = obj$report()$`ssb`,
     "rec" = obj$report()$`rec`,
+    "tac" = obj$report()$`tac`,
     "hcr" = hcrmode,
     "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
     "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
@@ -205,7 +206,7 @@ ahv <- 5
 Rbig <- 9
 sdr <- 0.6
 sd_survey <- 1e-6
-cv_u = 0.01
+cv_u = 0.1
 usequota = 1L
 
 #-------------------------------------------------------------------------------
@@ -254,6 +255,8 @@ opt[[1]]$obj
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 opt <- get_fit(hcrmode = "OM", objmode = "yield") 
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
+
 
 #-------------------------------------------------------------------------------
 # utility

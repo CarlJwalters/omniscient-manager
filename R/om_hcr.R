@@ -246,7 +246,9 @@ for(i in 1:20){
  sim[i,] <- cbind(t(opt[[2]]), unique(opt[[1]]$convergence), unique(opt[[1]]$pdHess))
 }
 set.seed(12)
+sd_survey <- 0.3
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+dev = 0.05
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)

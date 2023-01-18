@@ -94,9 +94,8 @@ get_fit <- function(hcrmode = c(
     useq = seq(from = 0, to = 1.0, by = 0.01), 
     modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
     usequota = usequota, 
-    umax = 1-exp(-2),
-    umult = sim_dat$umult, 
-    dev = dev
+    umax = umax,
+    umult = sim_dat$umult 
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -247,6 +246,8 @@ for(i in 1:20){
 }
 set.seed(12)
 sd_survey <- 0.3
+cv_u <- 0.1
+umax <- 1.0
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 dev = 0.05
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 

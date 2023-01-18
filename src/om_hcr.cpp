@@ -217,7 +217,7 @@ Type objective_function<Type>::operator()()
     if(usequota){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
-     if(ut(t)>umax){ut(t) = umax;}
+     ut(t)=0.05*log(exp(umax/0.05)+1)-0.05*log(exp(-(ut(t)-umax)/0.05)+1); 
      ut(t)= 1 - pow(umult(t), ut(t))*(1-ut(t));  
      yield(t) = ut(t)*vulb(t);                                      
     } else {

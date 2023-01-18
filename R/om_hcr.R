@@ -96,7 +96,7 @@ get_fit <- function(hcrmode = c(
     usequota = usequota, 
     umax = 1-exp(-2),
     umult = sim_dat$umult, 
-    dev = 1
+    dev = dev
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -208,6 +208,7 @@ sdr <- 0.6
 sd_survey <- 1e-6
 cv_u = 0.1
 usequota = 1L
+dev = 0.05
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -246,7 +247,7 @@ for(i in 1:20){
 }
 set.seed(12)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "linear", objmode = "utility") 
+opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
@@ -257,10 +258,12 @@ plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 opt <- get_fit(hcrmode = "OM", objmode = "yield") 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 
+plot(opt[[1]]$tac, col = "blue", type = "l")
+
 
 #-------------------------------------------------------------------------------
 # utility
-sd_survey <- 1.5
+sd_survey <- 0.1
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
@@ -375,7 +378,7 @@ p1 <- dat1 %>% select(Ut, hcr, year) %>%
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
-ggsave("plots/all-rules-performance-cv-150.pdf", width = 7, height = 6, scale = 0.9)
+ggsave("plots/all-rules-performance-cv-0.pdf", width = 7, height = 6, scale = 0.9)
 
 
 opt <- get_fit(hcrmode = "linear", objmode = "yield")

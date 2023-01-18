@@ -218,9 +218,9 @@ Type objective_function<Type>::operator()()
     if(usequota && hcrmode > 0){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
-     ut(t)= dev*log(exp(umax / dev) + 1) - dev*log(exp(-(tac / vulb(t) - umax)/dev) + 1);
-     utt(t) = ut(t);
-     ut(t)= 1 - pow(umult(t), utt(t))*(1-utt(t));
+     ut(t)= dev*log(exp(umax / dev) + 1) - dev*log(exp(-(tac(t) / vulb(t) - umax)/dev) + 1);
+     Type utt = ut(t);
+     ut(t) = 1 - pow(umult(t), utt)*(1-utt);
     } 
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);

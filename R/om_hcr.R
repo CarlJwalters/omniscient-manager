@@ -236,7 +236,7 @@ rules <- c(
 # # testing
 # set.seed(1)
 pbig <- 0.05
-sd_survey <- 1e-9
+sd_survey <- 0.3
 set.seed(1)
 
 sim <- matrix(NA, nrow=20, ncol = 4)

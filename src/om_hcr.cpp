@@ -159,13 +159,12 @@ Type objective_function<Type>::operator()()
   vector<Type> vulb(n_year);
   vector<Type> vbobs(n_year);
   vector<Type> ut(n_year);
-  vector<Type> utt(n_year);
   vector<Type> tac(n_year);
   
   abar.setZero();wbar.setZero(); yield.setZero(); 
   utility.setZero(); rec.setZero(); ssb.setZero(); 
   vulb.setZero(); ut.setZero(); vbobs.setZero(); 
-  utt.setZero(); tac.setZero(); 
+  tac.setZero(); 
   
   n = ninit; 
   Type obj = 0;
@@ -215,13 +214,15 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota && hcrmode > 0){
+    Type utt = 0; 
+    if(usequota){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t) / vulb(t);
      ut(t)= dev*log(exp(umax / dev) + 1) - dev*log(exp(-(tac(t) / vulb(t) - umax)/dev) + 1);
-     Type utt = ut(t);
-     ut(t) = 1 - pow(umult(t), utt)*(1-utt);
+     utt = ut(t);
     } 
+    if(hcrmode > 0){ut(t) = 1 - pow(umult(t), utt)*(1-utt);}
+
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 

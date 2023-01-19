@@ -32,7 +32,7 @@ get_devs <- function(pbig, Rbig, sdr, sd_survey) {
   # generate deviates for vulnerable biomass
   vmult <- exp(sd_survey * rnorm(n_year) - 0.5 * (sd_survey)^2)
   # generate deviates for quota management
-  umult <- exp(cv_u * rnorm(n_year) - 0.5 * (cv_u)^2)  
+  umult <- cv_u * rnorm(n_year)
   out <- tibble(
     year = 1:n_year,
     urand, Nrand, recmult, umult
@@ -205,7 +205,7 @@ ahv <- 5
 Rbig <- 9
 sdr <- 0.6
 sd_survey <- 1e-6
-cv_u = 0.1
+cv_u = 1e-6
 usequota = 1L
 dev = 0.05
 
@@ -249,12 +249,11 @@ sd_survey <- 0.3
 cv_u <- 0.1
 umax <- 1.0
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-dev = 0.05
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
 
-opt[[2]]
+exp(opt[[2]])
 opt[[1]]$obj
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
@@ -266,7 +265,7 @@ plot(opt[[1]]$tac, col = "blue", type = "l")
 
 #-------------------------------------------------------------------------------
 # utility
-sd_survey <- 0.1
+sd_survey <- 0.5
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 
@@ -381,7 +380,7 @@ p1 <- dat1 %>% select(Ut, hcr, year) %>%
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
-ggsave("plots/all-rules-performance-cv-0.pdf", width = 7, height = 6, scale = 0.9)
+ggsave("plots/all-rules-performance-cv-03.pdf", width = 7, height = 6, scale = 0.9)
 
 
 opt <- get_fit(hcrmode = "linear", objmode = "yield")

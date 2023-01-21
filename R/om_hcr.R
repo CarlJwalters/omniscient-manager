@@ -252,7 +252,7 @@ dyn.load(TMB::dynlib("src/om_hcr"))
 set.seed(2)
 sd_survey <- 1e-5
 cv_u <- 1e-5
-umax <- 1.0
+umax <- 0.8
 dev <- 0.05
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 

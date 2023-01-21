@@ -214,7 +214,7 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota && hcrmode > 0){
+    if(usequota && hcrmode > 0){ // if use quota and hcrmode != OM
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t)/vulb(t);
      Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1); 

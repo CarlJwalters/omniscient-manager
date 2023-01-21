@@ -171,13 +171,13 @@ get_fit <- function(hcrmode = c(
     pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
   dat <- dplyr::tibble(
-    "Ut" = obj$report()$`ut`,
-    "Vulb" = obj$report()$`vulb`,
-    "Abar" = obj$report()$`abar`,
-    "Wbar" = obj$report()$`wbar`,
-    "ssb" = obj$report()$`ssb`,
-    "rec" = obj$report()$`rec`,
-    "tac" = obj$report()$`tac`,
+    "Ut" = obj$report(opt$par)$`ut`,
+    "Vulb" = obj$report(opt$par)$`vulb`,
+    "Abar" = obj$report(opt$par)$`abar`,
+    "Wbar" = obj$report(opt$par)$`wbar`,
+    "ssb" = obj$report(opt$par)$`ssb`,
+    "rec" = obj$report(opt$par)$`rec`,
+    "tac" = obj$report(opt$par)$`tac`,
     "hcr" = hcrmode,
     "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
     "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
@@ -185,7 +185,7 @@ get_fit <- function(hcrmode = c(
     "criterion" = objmode, 
     "year" = 1:n_year
   )
-  list(dat, opt$par, "start par" = tmb_pars)
+  list(dat, opt$par)
 }
 
 #-------------------------------------------------------------------------------

@@ -12,8 +12,8 @@ Type ut_linear(vector<Type> par, Type vulb)
   vector<Type> seq(2); 
   seq.setZero(); 
   seq(0) = 0; 
-  seq(1) = exp(par(0))*(vulb-exp(par(1)))/vulb; 
-  Type out = max(seq);               
+  seq(1) = par(0)*(vulb-par(1))/vulb; 
+  Type out = max(seq);  
   return out;
 }  
 
@@ -214,13 +214,13 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota && hcrmode > 0){ // if usequota and hcrmode != OM
-     tac(t) = ut(t)*vbobs(t); 
-     ut(t) = tac(t)/vulb(t);
-     Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1); 
-     Type ftt = -log(1.0001 - uout)*(1 + umult(t)); 
-     ut(t)=1-exp(-ftt);
-    } 
+    // if(usequota && hcrmode > 0){ // if usequota and hcrmode != OM
+    //   tac(t) = ut(t)*vbobs(t); 
+    //   ut(t) = tac(t)/vulb(t);
+    //   Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1); 
+    //   Type ftt = -log(1.0001 - uout)*(1 + umult(t)); 
+    //   ut(t)= 1 - exp(-ftt);
+    // } 
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 

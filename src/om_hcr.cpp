@@ -162,11 +162,14 @@ Type objective_function<Type>::operator()()
   vector<Type> tac(n_year);
   vector<Type> uout(n_year); 
   vector<Type> ftt(n_year); 
+  vector<Type> ut2(n_year); 
+  
   
   abar.setZero();wbar.setZero(); yield.setZero(); 
   utility.setZero(); rec.setZero(); ssb.setZero(); 
   vulb.setZero(); ut.setZero(); vbobs.setZero(); 
   tac.setZero(); uout.setZero(); ftt.setZero();
+  ut2.setZero(); 
   
   n = ninit; 
   Type obj = 0;
@@ -221,7 +224,7 @@ Type objective_function<Type>::operator()()
       ut(t) = tac(t)/vulb(t);
       uout(t) = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1);
       ftt(t) = -log(1.0001 - uout(t))*(1 + umult(t));
-      // ut(t)= 1 - exp(-ftt);
+      ut2(t)= 1 - exp(-ftt(t));
     }
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
@@ -278,6 +281,7 @@ Type objective_function<Type>::operator()()
   REPORT(tac);
   REPORT(uout);
   REPORT(ftt);
+  REPORT(ut2); 
 
   return obj; 
 }

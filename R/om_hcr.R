@@ -107,7 +107,7 @@ get_fit <- function(hcrmode = c(
       tmb_pars <- list(par = rep(0.05, length(years)))
     }
   } else if (hcrmode == "linear") {
-    tmb_pars <- list(par = c(0.5, 0.5))
+    tmb_pars <- list(par = c(0.3, 0.6))
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
@@ -169,7 +169,6 @@ get_fit <- function(hcrmode = c(
     convergence <- opt$convergence
     pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
-  browser()
   dat <- dplyr::tibble(
     "Ut" = obj$report(opt$par)$`ut`,
     "Vulb" = obj$report(opt$par)$`vulb`,

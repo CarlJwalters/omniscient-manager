@@ -224,7 +224,7 @@ Type objective_function<Type>::operator()()
       ut(t) = tac(t)/vulb(t);
       uout(t) = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1);
       ftt(t) = -log(1.0001 - uout(t))*(1 + umult(t));
-      ut2(t)= 1 - exp(-ftt(t));
+      ut(t)= 1 - exp(-ftt(t));
     }
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);

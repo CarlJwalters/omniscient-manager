@@ -169,6 +169,7 @@ get_fit <- function(hcrmode = c(
     convergence <- opt$convergence
     pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
+  browser()
   dat <- dplyr::tibble(
     "Ut" = obj$report(opt$par)$`ut`,
     "Vulb" = obj$report(opt$par)$`vulb`,
@@ -247,7 +248,7 @@ for(i in 1:20){
 # compile the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
-dyn.unload(TMB::dynlib("src/om_hcr"))
+dyn.load(TMB::dynlib("src/om_hcr"))
 
 set.seed(2)
 sd_survey <- 1e-5

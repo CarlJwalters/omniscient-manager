@@ -219,7 +219,7 @@ Type objective_function<Type>::operator()()
       tac(t) = ut(t)*vbobs(t);
       ut(t) = tac(t)/vulb(t);
       uout(t) = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1);
-      Type ftt = -log(1.0001 - uout)*(1 + umult(t));
+      Type ftt = -log(1.0001 - uout(t))*(1 + umult(t));
       // ut(t)= 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);                                      

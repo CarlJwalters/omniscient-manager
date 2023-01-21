@@ -111,7 +111,8 @@ Type objective_function<Type>::operator()()
   DATA_INTEGER(usequota);   // use a quota?
   DATA_INTEGER(umax);       // cap on implemented ut
   DATA_VECTOR(umult);       // implementation error ut
-
+  DATA_SCALAR(dev);         // for smooth ut implementation
+  
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
   vector<Type> vul(n_age);
@@ -213,15 +214,13 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota){
+    if(usequota && hcrmode > 0){
      tac(t) = ut(t)*vbobs(t); 
      ut(t) = tac(t)/vulb(t);
-     if(ut(t) > umax){ut(t) = umax;}
+     Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut(t) - umax)/dev) + 1); 
+     Type ftt = -log(1.0001 - uout)*(1 + umult(t)); 
+     ut(t)=1-exp(-ftt);
     } 
-    if(hcrmode > 0){
-      Type ftt =- log(1.000001-ut(t))*(1+umult(t));
-      ut(t)=1-exp(-ftt);
-    }
     yield(t) = ut(t)*vulb(t);                                      
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 

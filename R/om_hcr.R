@@ -11,7 +11,6 @@ library(ggqfc)
 library(tidyverse)
 library(future)
 library(furrr)
-install.packages("MetBrewer")
 library(MetBrewer)
 
 # ------------------------------------------------------------------------------
@@ -95,7 +94,8 @@ get_fit <- function(hcrmode = c(
     modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
     usequota = usequota, 
     umax = umax,
-    umult = sim_dat$umult 
+    umult = sim_dat$umult, 
+    dev = 0.05
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -107,7 +107,7 @@ get_fit <- function(hcrmode = c(
       tmb_pars <- list(par = rep(0.05, length(years)))
     }
   } else if (hcrmode == "linear") {
-    tmb_pars <- list(par = c(0.1, 0.1))
+    tmb_pars <- list(par = c(log(0.5), log(0.5)))
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
@@ -154,6 +154,7 @@ get_fit <- function(hcrmode = c(
   if(objmode == "yield" && hcrmode == "rect"){
     tmb_pars <- list(par = c(umay, 0.3 * bo, 0.5 * bo)) # overwrite dummy values
   }
+  browser()
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
   if (hcrmode != "dfo") {
     opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
@@ -245,9 +246,9 @@ for(i in 1:20){
  sim[i,] <- cbind(t(opt[[2]]), unique(opt[[1]]$convergence), unique(opt[[1]]$pdHess))
 }
 set.seed(12)
-sd_survey <- 0.3
+sd_survey <- 0.5
 cv_u <- 0.1
-umax <- 1.0
+umax <- 0.8
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 unique(opt[[1]]$convergence)
@@ -256,7 +257,7 @@ unique(opt[[1]]$pdHess)
 exp(opt[[2]])
 opt[[1]]$obj
 
-plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
+plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "black")
 opt <- get_fit(hcrmode = "OM", objmode = "yield") 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "blue")
 

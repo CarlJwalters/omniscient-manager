@@ -129,6 +129,10 @@ get_fit <- function(hcrmode = c(
     lower <- rep(-Inf, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
   }
+  if(hcrmode == "linear"){
+    lower = rep(0, length(tmb_pars$par))
+    upper = rep(1, length(tmb_pars$par))
+  }
   if (hcrmode == "spline") {
     lower <- rep(0, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
@@ -250,9 +254,9 @@ compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
 set.seed(2)
-sd_survey <- 1e-5
-cv_u <- 1e-5
-umax <- 0.8
+sd_survey <- 1e-3
+cv_u <- 1e-4
+umax <- 0.5
 dev <- 0.05
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 opt <- get_fit(hcrmode = "linear", objmode = "yield") 
@@ -262,6 +266,8 @@ unique(opt[[1]]$pdHess)
 opt[[2]]
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "black")
+abline(v = opt[[2]][2])
+
 plot(opt[[1]]$Vulb, col = "blue")
 
 plot(opt[[1]]$tac, col = "blue", type = "l")

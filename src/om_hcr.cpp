@@ -89,9 +89,7 @@ template <class Type>
 Type bound_ut(Type ut, Type umult, Type umax, Type dev)
 {
   Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut - umax)/dev) + 1);
-  Type ftt = -log(1.0001 - uout)*(1 + umult);
-  Type out = 1 - exp(-ftt);
-  return out; 
+  return uout; 
 }
 
 template <class Type>
@@ -227,6 +225,8 @@ Type objective_function<Type>::operator()()
       tac(t) = ut(t)*vbobs(t);
       ut(t) = tac(t)/vulb(t);
       ut(t) = bound_ut(ut(t), umult(t), umax, dev); 
+      Type ftt = -log(1.0001 – ut(t))*(1 + umult);
+      ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);; 
     utility(t) = pow(yield(t), upow);

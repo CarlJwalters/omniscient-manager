@@ -118,7 +118,7 @@ Type objective_function<Type>::operator()()
   DATA_VECTOR(useq);        // sequence from 0 to 1 for stochastic Umsy estimation
   DATA_INTEGER(modulus);    // how often do we want to collapse the fishery?
   DATA_INTEGER(usequota);   // use a quota?
-  DATA_SCALAR(umax);       // cap on implemented ut
+  DATA_SCALAR(umax);        // cap on implemented ut
   DATA_VECTOR(umult);       // implementation error ut
   DATA_SCALAR(dev);         // for smooth ut implementation
   

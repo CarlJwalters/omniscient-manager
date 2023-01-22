@@ -85,8 +85,8 @@ Type ut_dfo(vector<Type> dfopar, Type vulb)
   return out;
 }
 
-template <class Type>
-Type bound_ut(Type ut, Type umult, Type umax, Type dev)
+template <class Type> 
+Type bound_ut(Type ut, Type umax, Type dev)
 {
   Type uout = dev*log(exp((umax/dev)) + 1) - dev*log(exp(-(ut - umax)/dev) + 1);
   return uout; 
@@ -221,11 +221,14 @@ Type objective_function<Type>::operator()()
       exit(EXIT_FAILURE);
       break;
     }
-    if(usequota && hcrmode > 0){ // if usequota and hcrmode != OM
-      tac(t) = ut(t)*vbobs(t);
-      ut(t) = tac(t)/vulb(t);
-      ut(t) = bound_ut(ut(t), umult(t), umax, dev); 
-      Type ftt = -log(1.0001 – ut(t))*(1 + umult(t));
+    if(hcrmode > 0){  // if not OM
+      if(usequota){
+        tac(t) = ut(t)*vbobs(t);
+        ut(t) = tac(t)/vulb(t);
+        ut(t) = bound_ut(ut(t), umax, dev);
+      }
+      Type uttt = ut(t);
+      Type ftt = -log(1.0001 - uttt)*(1 + umult(t));
       ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);; 
@@ -237,7 +240,7 @@ Type objective_function<Type>::operator()()
     rec(t) = n(0); 
   }
   obj -= utility.sum(); 
-  
+
   // stochastic estimation of umay, bo, bmay
   SIMULATE{ 
     Type umay = 0; 

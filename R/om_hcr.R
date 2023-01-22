@@ -256,10 +256,10 @@ dyn.load(TMB::dynlib("src/om_hcr"))
 set.seed(2)
 sd_survey <- 0.3
 cv_u <- 1e-3
-umax <- 0.4
+umax <- 0.6
 dev <- 0.05
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "logit", objmode = "yield") 
+opt <- get_fit(hcrmode = "linear", objmode = "yield") 
 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)

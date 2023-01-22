@@ -225,7 +225,7 @@ Type objective_function<Type>::operator()()
       tac(t) = ut(t)*vbobs(t);
       ut(t) = tac(t)/vulb(t);
       ut(t) = bound_ut(ut(t), umult(t), umax, dev); 
-      Type ftt = -log(1.0001 – ut(t))*(1 + umult);
+      Type ftt = -log(1.0001 – ut(t))*(1 + umult(t));
       ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);; 

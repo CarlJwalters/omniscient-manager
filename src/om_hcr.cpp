@@ -222,13 +222,12 @@ Type objective_function<Type>::operator()()
       break;
     }
     if(hcrmode > 0){  // if not OM
-      if(usequota){
+      if(usequota){   // TAC (output) controls if true, otherwise input control
         tac(t) = ut(t)*vbobs(t);
         ut(t) = tac(t)/vulb(t);
         ut(t) = bound_ut(ut(t), umax, dev);
       }
-      Type uttt = ut(t);
-      Type ftt = -log(1.0001 - uttt)*(1 + umult(t));
+      Type ftt = -log(1.0001 - ut(t))*(1 + umult(t));  // implementation error in ut(t)
       ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);; 

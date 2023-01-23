@@ -110,7 +110,7 @@ get_fit <- function(hcrmode = c(
     if(objmode == "yield"){
       tmb_pars <- list(par = c(0.3, 0.6))
     } else if (objmode == "utility"){
-      tmb_pars <- list(par = c(0.03, .12))
+      tmb_pars <- list(par = c(0.1, 0.25))
     }
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
@@ -134,8 +134,8 @@ get_fit <- function(hcrmode = c(
     upper <- rep(Inf, length(tmb_pars$par))
   }
   if(hcrmode == "linear"){
-    lower = rep(0, length(tmb_pars$par))
-    upper = rep(1, length(tmb_pars$par))
+    lower = rep(0.0001, length(tmb_pars$par))
+    upper = rep(0.9999, length(tmb_pars$par))
   }
   if (hcrmode == "spline") {
     lower <- rep(0, length(tmb_pars$par))
@@ -250,9 +250,11 @@ compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
 set.seed(2)
-sd_survey <- 1e-3
+sd_survey <- 0.3
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 upow = 0.6
+umax = 0.8
+usequota = 1 
 opt <- get_fit(hcrmode = "linear", objmode = "utility") 
 
 unique(opt[[1]]$convergence)

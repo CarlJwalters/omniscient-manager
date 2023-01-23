@@ -231,7 +231,7 @@ Type objective_function<Type>::operator()()
       ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);
-    utility(t) = pow(yield(t), upow);
+    utility(t) = pow(yield(t) + 0.0001, upow);
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        

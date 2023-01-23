@@ -107,7 +107,11 @@ get_fit <- function(hcrmode = c(
       tmb_pars <- list(par = rep(0.05, length(years)))
     }
   } else if (hcrmode == "linear") {
-    tmb_pars <- list(par = c(0.3, 0.6))
+    if(objmode == "yield"){
+      tmb_pars <- list(par = c(0.3, 0.6))
+    } else if (objmode == "utility"){
+      tmb_pars <- list(par = c(0.03, .12))
+    }
   } else if (hcrmode == "spline") {
     tmb_pars <- list(par = rep(0.1, length(tmb_data$knots)))
   } else if (hcrmode == "rect") {
@@ -122,8 +126,8 @@ get_fit <- function(hcrmode = c(
     tmb_pars <- list(par = c(0.6, 1, 0.7, 0.75))
   }
   if (hcrmode == "OM") {
-    lower <- rep(0.0001, length(years))
-    upper <- rep(0.9999, length(years))
+    lower <- rep(0, length(years))
+    upper <- rep(1, length(years))
   }
   if (hcrmode != "OM") {
     lower <- rep(-Inf, length(tmb_pars$par))
@@ -174,13 +178,13 @@ get_fit <- function(hcrmode = c(
     pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
   dat <- dplyr::tibble(
-    "Ut" = obj$report(opt$par)$`ut`,
-    "Vulb" = obj$report(opt$par)$`vulb`,
-    "Abar" = obj$report(opt$par)$`abar`,
-    "Wbar" = obj$report(opt$par)$`wbar`,
-    "ssb" = obj$report(opt$par)$`ssb`,
-    "rec" = obj$report(opt$par)$`rec`,
-    "tac" = obj$report(opt$par)$`tac`,
+    "Ut" = obj$report()$`ut`,
+    "Vulb" = obj$report()$`vulb`,
+    "Abar" = obj$report()$`abar`,
+    "Wbar" = obj$report()$`wbar`,
+    "ssb" = obj$report()$`ssb`,
+    "rec" = obj$report()$`rec`,
+    "tac" = obj$report()$`tac`,
     "hcr" = hcrmode,
     "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
     "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
@@ -212,6 +216,7 @@ sd_survey <- 1e-6
 cv_u = 1e-6
 usequota = 1L
 dev = 0.05
+umax = 0.5
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -237,29 +242,18 @@ rules <- c(
 
 ################################################################################
 # # testing
-# set.seed(1)
-pbig <- 0.05
-sd_survey <- 0.3
-set.seed(1)
-
-sim <- matrix(NA, nrow=20, ncol = 4)
-for(i in 1:20){
- sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
- opt <- get_fit(hcrmode = "linear", objmode = "yield") 
- sim[i,] <- cbind(t(opt[[2]]), unique(opt[[1]]$convergence), unique(opt[[1]]$pdHess))
-}
 # compile the cpp
+SOMETHING VERY WRONG WITH UTILITY
+
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
 set.seed(2)
-sd_survey <- 0.3
-cv_u <- 1e-3
-umax <- 0.6
-dev <- 0.05
+sd_survey <- 1e-3
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-opt <- get_fit(hcrmode = "linear", objmode = "yield") 
+upow = 0.6
+opt <- get_fit(hcrmode = "linear", objmode = "utility") 
 
 unique(opt[[1]]$convergence)
 unique(opt[[1]]$pdHess)
@@ -273,15 +267,8 @@ plot(opt[[1]]$Vulb, col = "blue")
 
 plot(opt[[1]]$tac, col = "blue", type = "l")
 
-pval<-function(logit,a){
-  a/(1+exp(-logit))
-}
-curve(pval(x,0.4),from =-3, to=3)
-
-pval(-100, 0.4)
-
 #-------------------------------------------------------------------------------
-sd_survey <- 0.5
+sd_survey <- 0.1
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
 

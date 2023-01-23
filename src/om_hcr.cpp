@@ -230,7 +230,7 @@ Type objective_function<Type>::operator()()
       Type ftt = -log(1.0001 - ut(t))*(1 + umult(t));  // implementation error in ut(t)
       ut(t) = 1 - exp(-ftt);
     }
-    yield(t) = ut(t)*vulb(t);; 
+    yield(t) = ut(t)*vulb(t);
     utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    

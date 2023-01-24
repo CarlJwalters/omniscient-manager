@@ -217,7 +217,7 @@ sd_survey <- 1e-6
 cv_u <- 1e-6
 usequota <- 1L
 dev <- 0.05
-umax <- 0.5
+umax <- 0.8
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -245,8 +245,6 @@ for (i in unique(my_sds)) {
   sd_survey <- i
   cv_u <- 1e-6
   sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-  upow <- 0.6
-  umax <- 0.8
   # Rbig=1
   # pbig=0.999
   # sdr=0.8

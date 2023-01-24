@@ -249,18 +249,34 @@ cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
-set.seed(2)
-sd_survey <- 0.3
-sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-upow = 0.6
-umax = 0.8
-usequota = 1 
-opt <- get_fit(hcrmode = "linear", objmode = "utility") 
+my_sds <- seq(from = 1e-3, to = 0.5, length.out = 10)
+my_answers <- matrix(NA, nrow = length(my_sds), ncol = 4)
+for(i in unique(my_sds)){
+ set.seed(2)
+ sd_survey <- i
+ cv_u <- 1e-3
+ sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+ upow = 0.6
+ umax = 0.8
+ usequota = 1 
+ opt <- get_fit(hcrmode = "linear", objmode = "utility") 
+ my_answers[which(my_sds == i),1:2] <- opt[[2]]
+ my_answers[which(my_sds == i),3] <- opt[[1]]$obj[1]
+ my_answers[which(my_sds == i),4] <- i 
+}
 
-unique(opt[[1]]$convergence)
-unique(opt[[1]]$pdHess)
+plot(my_answers[,2] ~ my_answers[,4], xlab = "sdo", ylab = "bmin (blue) or cslope (red)",
+     col= "blue", pch = 16, type = "b")
+points(my_answers[,1] ~ my_answers[,4], xlab = "sdo", ylab = "bmin",
+     col= "red", pch = 16, type = "b")
 
-opt[[2]]
+plot(my_answers[,3] ~ my_answers[,4], xlab = "sdo", ylab = "Yield",
+     col= "blue", pch = 16, type = "b")
+
+
+
+
+
 
 plot(opt[[1]]$Ut ~ opt[[1]]$Vulb, col = "black")
 abline(v = opt[[2]][2])

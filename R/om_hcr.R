@@ -90,26 +90,26 @@ get_fit <- function(hcrmode = c(
     knots = c(0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 10),
     dfopar = c(1000, 1000), # dummy values, these are set using .cpp call below
     vmult = sim_dat$vmult,
-    useq = seq(from = 0, to = 1.0, by = 0.01), 
+    useq = seq(from = 0, to = 1.0, by = 0.01),
     modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
-    usequota = usequota, 
+    usequota = usequota,
     umax = umax,
-    umult = sim_dat$umult, 
+    umult = sim_dat$umult,
     dev = 0.05
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
   }
   if (hcrmode == "OM") {
-    if(objmode == "yield"){
+    if (objmode == "yield") {
       tmb_pars <- list(par = rep(0.2, length(years)))
-    } else if (objmode == "utility"){
+    } else if (objmode == "utility") {
       tmb_pars <- list(par = rep(0.05, length(years)))
     }
   } else if (hcrmode == "linear") {
-    if(objmode == "yield"){
-      tmb_pars <- list(par = c(0.3, 0.6))
-    } else if (objmode == "utility"){
+    if (objmode == "yield") {
+      tmb_pars <- list(par = c(0.7, 0.4))
+    } else if (objmode == "utility") {
       tmb_pars <- list(par = c(0.1, 0.25))
     }
   } else if (hcrmode == "spline") {
@@ -133,9 +133,9 @@ get_fit <- function(hcrmode = c(
     lower <- rep(-Inf, length(tmb_pars$par))
     upper <- rep(Inf, length(tmb_pars$par))
   }
-  if(hcrmode == "linear"){
-    lower = rep(0.0001, length(tmb_pars$par))
-    upper = rep(0.9999, length(tmb_pars$par))
+  if (hcrmode == "linear") {
+    lower <- rep(0, length(tmb_pars$par))
+    upper <- c(1, Inf)
   }
   if (hcrmode == "spline") {
     lower <- rep(0, length(tmb_pars$par))
@@ -159,7 +159,7 @@ get_fit <- function(hcrmode = c(
     tmb_data$dfopar[1] <- umay
     tmb_data$dfopar[2] <- bo
   }
-  if(objmode == "yield" && hcrmode == "rect"){
+  if (objmode == "yield" && hcrmode == "rect") {
     tmb_pars <- list(par = c(umay, 0.3 * bo, 0.5 * bo)) # overwrite dummy values
   }
   obj <- MakeADFun(tmb_data, tmb_pars, silent = F, DLL = "om_hcr")
@@ -189,7 +189,7 @@ get_fit <- function(hcrmode = c(
     "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
     "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
     "pdHess" = ifelse(hcrmode != "dfo", pdHess, 0),
-    "criterion" = objmode, 
+    "criterion" = objmode,
     "year" = 1:n_year
   )
   list(dat, opt$par)
@@ -211,12 +211,13 @@ ahm <- 6
 upow <- 0.6 # note this only matters when objmode == "utility", else upow = 1
 ahv <- 5
 Rbig <- 9
+pbig <- 0.07 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
 sdr <- 0.6
 sd_survey <- 1e-6
-cv_u = 1e-6
-usequota = 1L
-dev = 0.05
-umax = 0.5
+cv_u <- 1e-6
+usequota <- 1L
+dev <- 0.05
+umax <- 0.5
 
 #-------------------------------------------------------------------------------
 # compile the cpp
@@ -224,55 +225,53 @@ cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
-years <- 1:2000
-n_year <- length(years)
-pbig <- 0.07 # 0.01, 0.05, 0.1, 0.25, 0.5, 1
-
-#set.seed(1)
-#sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
-
-# run a few rules
-rules <- c(
-  "OM", "linear",
-  "spline", "rect", 
-  "exponential", "logit", 
-  "logit-linear", "dfo"
-)
-
 
 ################################################################################
 # # testing
 # compile the cpp
-SOMETHING VERY WRONG WITH UTILITY
 
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
-my_sds <- seq(from = 1e-3, to = 3, length.out = 10)
-my_answers <- matrix(NA, nrow = length(my_sds), ncol = 4)
-obj = "yield"
-for(i in unique(my_sds)){
- set.seed(2)
- sd_survey <- i
- cv_u <- 1e-3
- sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
- upow = 0.6
- umax = 0.8
- usequota = 1 
- opt <- get_fit(hcrmode = "linear", objmode = obj) 
- my_answers[which(my_sds == i),1:2] <- opt[[2]]
- my_answers[which(my_sds == i),3] <- opt[[1]]$obj[1]
- my_answers[which(my_sds == i),4] <- i 
-}
-par(mfrow=c(2,1))
-plot(my_answers[,2] ~ my_answers[,4], xlab = "sdo", ylab = "bmin (blue) or cslope (red)",
-     col= "blue", pch = 16, type = "b", ylim = c(0,1), main = obj)
-points(my_answers[,1] ~ my_answers[,4], xlab = "sdo", ylab = "bmin",
-     col= "red", pch = 16, type = "b")
 
-plot(my_answers[,3] ~ my_answers[,4], xlab = "sdo", ylab = "Yield",
-     col= "blue", pch = 16, type = "b")
+par(mfrow = c(2, 1))
+
+my_sds <- seq(from = 1e-3, to = 3, length.out = 15)
+my_answers <- matrix(NA, nrow = length(my_sds), ncol = 6)
+obj <- "utility"
+for (i in unique(my_sds)) {
+  set.seed(5)
+  sd_survey <- i
+  cv_u <- 1e-6
+  sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+  upow <- 0.6
+  umax <- 0.8
+  # Rbig=1
+  # pbig=0.999
+  # sdr=0.8
+  usequota <- 1
+  opt <- get_fit(hcrmode = "linear", objmode = obj)
+  my_answers[which(my_sds == i), 1:2] <- opt[[2]]
+  my_answers[which(my_sds == i), 3] <- opt[[1]]$obj[1]
+  my_answers[which(my_sds == i), 4] <- i
+  my_answers[which(my_sds == i), 5] <- opt[[1]]$pdHess[1]
+  my_answers[which(my_sds == i), 6] <- opt[[1]]$convergence[1]
+}
+
+plot(my_answers[, 2] ~ my_answers[, 4],
+  xlab = "sdo", ylab = "bmin (blue) or cslope (red)",
+  col = "blue", pch = 16, type = "b", ylim = c(0, 2), main = obj
+)
+points(my_answers[, 1] ~ my_answers[, 4],
+  xlab = "sdo", ylab = "bmin",
+  col = "red", pch = 16, type = "b"
+)
+
+plot(my_answers[, 3] ~ my_answers[, 4],
+  xlab = "sdo", ylab = "Yield",
+  col = "blue", pch = 16, type = "b", ylim = c(200, 260)
+)
 
 
 
@@ -290,6 +289,15 @@ plot(opt[[1]]$tac, col = "blue", type = "l")
 sd_survey <- 0.1
 set.seed(1)
 sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
+
+# run a few rules
+rules <- c(
+  "OM", "linear",
+  "spline", "rect",
+  "exponential", "logit",
+  "logit-linear", "dfo"
+)
+
 
 system.time({
   dat <- NULL
@@ -322,12 +330,12 @@ utility
 
 utility$name <- paste0(utility$hcr, " ", utility$obj)
 utility$color <- case_when(
-  utility$hcr == "OM" ~ "#67322e", 
+  utility$hcr == "OM" ~ "#67322e",
   utility$hcr == "logit" ~ "#99610a",
   utility$hcr == "spline" ~ "#c38f16",
   utility$hcr == "linear" ~ "#6e948c",
   utility$hcr == "rect" ~ "#2c6b67",
-  utility$hcr == "dfo" ~ "#122c43", 
+  utility$hcr == "dfo" ~ "#122c43",
   utility$hcr == "exponential" ~ "#175449"
 )
 # now for yield
@@ -361,44 +369,45 @@ yield <- dat1 %>%
 
 yield$name <- paste0(yield$hcr, " ", yield$obj)
 yield$color <- case_when(
-  yield$hcr == "OM" ~ "#67322e", 
+  yield$hcr == "OM" ~ "#67322e",
   yield$hcr == "logit" ~ "#99610a",
   yield$hcr == "logit-linear" ~ "#c38f16",
   yield$hcr == "linear" ~ "#6e948c",
   yield$hcr == "rect" ~ "#2c6b67",
   yield$hcr == "dfo" ~ "#122c43"
-  
 )
 
-breaks <-  seq(from = 1000, to = 1200, length.out = 6)
-p <- dat %>% select(Ut, hcr, year) %>%
+breaks <- seq(from = 1000, to = 1200, length.out = 6)
+p <- dat %>%
+  select(Ut, hcr, year) %>%
   filter(year >= 1000, year <= 1200) %>%
   mutate(hcr = fct_relevel(hcr, utility$hcr)) %>%
-  ggplot(aes(x = year, y = Ut, color = hcr)) + 
-  ggtitle("HARA utility") + 
-  xlab("Year of simulation") + 
-  ylab(expression(Exploitation~rate~U[t])) + 
-  scale_x_continuous(breaks = breaks) + 
-  geom_line(position = position_dodge(width = 1), size = 0.75) + 
-  ggqfc::theme_qfc() + 
-  theme(plot.title = element_text(hjust = 0.5)) + 
-  scale_color_manual(values = utility$color, labels=utility$name) + 
-  guides(color=guide_legend(title="Relative policy \nperformance"))
-#p
+  ggplot(aes(x = year, y = Ut, color = hcr)) +
+  ggtitle("HARA utility") +
+  xlab("Year of simulation") +
+  ylab(expression(Exploitation ~ rate ~ U[t])) +
+  scale_x_continuous(breaks = breaks) +
+  geom_line(position = position_dodge(width = 1), size = 0.75) +
+  ggqfc::theme_qfc() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = utility$color, labels = utility$name) +
+  guides(color = guide_legend(title = "Relative policy \nperformance"))
+# p
 
-p1 <- dat1 %>% select(Ut, hcr, year) %>%
+p1 <- dat1 %>%
+  select(Ut, hcr, year) %>%
   filter(year >= 1000, year <= 1200) %>%
   mutate(hcr = fct_relevel(hcr, yield$hcr)) %>%
-  ggplot(aes(x = year, y = Ut, color = hcr)) + 
-  ggtitle("Maximum average yield") + 
-  xlab("Year of simulation") + 
-  ylab(expression(Exploitation~rate~U[t])) + 
-  scale_x_continuous(breaks = breaks) + 
-  geom_line(position = position_dodge(width = 1), size = 0.75) + 
-  ggqfc::theme_qfc() + 
-  theme(plot.title = element_text(hjust = 0.5)) + 
-  scale_color_manual(values = yield$color, labels=yield$name) + 
-  guides(color=guide_legend(title="Relative policy \nperformance"))
+  ggplot(aes(x = year, y = Ut, color = hcr)) +
+  ggtitle("Maximum average yield") +
+  xlab("Year of simulation") +
+  ylab(expression(Exploitation ~ rate ~ U[t])) +
+  scale_x_continuous(breaks = breaks) +
+  geom_line(position = position_dodge(width = 1), size = 0.75) +
+  ggqfc::theme_qfc() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = yield$color, labels = yield$name) +
+  guides(color = guide_legend(title = "Relative policy \nperformance"))
 
 both <- cowplot::plot_grid(p1, p, nrow = 2)
 
@@ -479,33 +488,33 @@ for (u in 1:length(upows)) {
 dev.off()
 
 plot(opt[[1]]$rec ~ opt[[1]]$ssb,
-     ylab = "recruitment",
-     xlab = "spawning stock biomass", col = "darkgreen"
+  ylab = "recruitment",
+  xlab = "spawning stock biomass", col = "darkgreen"
 )
 years
 plot(opt[[1]]$rec ~ years,
-     ylab = "recruitment",
-     xlab = "time", col = "darkgreen", type = "b"
+  ylab = "recruitment",
+  xlab = "time", col = "darkgreen", type = "b"
 )
 
 plot(opt[[1]]$ssb ~ years,
-     ylab = "ssb",
-     xlab = "time", col = "darkgreen", type = "b"
+  ylab = "ssb",
+  xlab = "time", col = "darkgreen", type = "b"
 )
 
 plot(opt[[1]]$ssb,
-     ylab = "ssb",
-     xlab = "time", col = "darkgreen", type = "b"
+  ylab = "ssb",
+  xlab = "time", col = "darkgreen", type = "b"
 )
 
 plot(opt[[1]]$Vulb,
-     ylab = "vulb",
-     xlab = "time", 
-     col = "black", type = "l"
+  ylab = "vulb",
+  xlab = "time",
+  col = "black", type = "l"
 )
 
 points(opt[[1]]$Ut,
-     col = "red", type = "l"
+  col = "red", type = "l"
 )
 max(opt[[1]]$Ut)
 # Notes:

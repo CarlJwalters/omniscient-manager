@@ -249,8 +249,9 @@ cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
-my_sds <- seq(from = 1e-3, to = 0.5, length.out = 10)
+my_sds <- seq(from = 1e-3, to = 3, length.out = 10)
 my_answers <- matrix(NA, nrow = length(my_sds), ncol = 4)
+obj = "yield"
 for(i in unique(my_sds)){
  set.seed(2)
  sd_survey <- i
@@ -259,14 +260,14 @@ for(i in unique(my_sds)){
  upow = 0.6
  umax = 0.8
  usequota = 1 
- opt <- get_fit(hcrmode = "linear", objmode = "utility") 
+ opt <- get_fit(hcrmode = "linear", objmode = obj) 
  my_answers[which(my_sds == i),1:2] <- opt[[2]]
  my_answers[which(my_sds == i),3] <- opt[[1]]$obj[1]
  my_answers[which(my_sds == i),4] <- i 
 }
-
+par(mfrow=c(2,1))
 plot(my_answers[,2] ~ my_answers[,4], xlab = "sdo", ylab = "bmin (blue) or cslope (red)",
-     col= "blue", pch = 16, type = "b")
+     col= "blue", pch = 16, type = "b", ylim = c(0,1), main = obj)
 points(my_answers[,1] ~ my_answers[,4], xlab = "sdo", ylab = "bmin",
      col= "red", pch = 16, type = "b")
 

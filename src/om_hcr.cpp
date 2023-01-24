@@ -175,7 +175,6 @@ Type objective_function<Type>::operator()()
 
   n = ninit; 
   Type obj = 0;
-  Type offset = 1e-9; 
 
   for(int t = 0; t < n_year; t++){
     if(t%modulus==0){n = rinit*n;}
@@ -228,11 +227,11 @@ Type objective_function<Type>::operator()()
         ut(t) = tac(t)/vulb(t);
         ut(t) = bound_ut(ut(t), umax, dev);
       }
-      Type ftt = -log((1 + offset) - ut(t))*(1 + umult(t));  // implementation error in ut(t)
+      Type ftt = -log(1 - ut(t))*(1 + umult(t));  // implementation error in ut(t)
       ut(t) = 1 - exp(-ftt);
     }
     yield(t) = ut(t)*vulb(t);
-    utility(t) = pow(yield(t) + offset, upow);
+    utility(t) = pow(yield(t), upow);
     n = s*n*(1-vul*ut(t)); 
     n(n_age - 1) = n(n_age - 1) + n(n_age - 2);                    
     for(int a = (n_age - 2); a > 0; a--){n(a) = n(a - 1);}        

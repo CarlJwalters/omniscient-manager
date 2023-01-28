@@ -14,7 +14,8 @@ library(furrr)
 library(MetBrewer)
 
 # ------------------------------------------------------------------------------
-get_devs <- function(pbig, Rbig, sdr, sd_survey) {
+get_devs <- function(pbig, Rbig, sdr, sd_survey, 
+                     sd_cr, sd_ro) {
   # generate recmult deviates
   urand <- runif(n_year, 0, 1)
   Nrand <- rnorm(n_year, 0, 1)
@@ -32,11 +33,15 @@ get_devs <- function(pbig, Rbig, sdr, sd_survey) {
   vmult <- exp(sd_survey * rnorm(n_year) - 0.5 * (sd_survey)^2)
   # generate deviates for quota management
   umult <- cv_u * rnorm(n_year)
+  # cr, ro devs
+  cr_samp <- cr*exp(sd_cr*rnorm(n_year / modulus, 0, 1) - 0.5*sd_cr^2)
+  ro_samp <- ro*exp(sd_ro*rnorm(n_year / modulus, 0, 1) - -0.5*sd_ro^2)
   out <- tibble(
     year = 1:n_year,
     urand, Nrand, recmult, umult
   )
-  list(dat = out, vmult = vmult, umult = umult)
+  list(dat = out, vmult = vmult, umult = umult, 
+       cr_samp = cr_samp, ro_samp = ro_samp)
 }
 
 # testing recmult
@@ -91,11 +96,13 @@ get_fit <- function(hcrmode = c(
     dfopar = c(1000, 1000), # dummy values, these are set using .cpp call below
     vmult = sim_dat$vmult,
     useq = seq(from = 0, to = 1.0, by = 0.01),
-    modulus = n_year + 1, # set to value above nyear means modulus collapse shut off
+    modulus = 200, # n_year + 1, # set to value above nyear means modulus collapse shut off
     usequota = usequota,
     umax = umax,
     umult = sim_dat$umult,
-    dev = 0.05
+    dev = 0.05,
+    cr_samp = sim_dat$cr_samp,
+    ro_samp = sim_dat$ro_samp
   )
   if (pbig > 0.4) {
     tmb_data$knots <- c(0, 1.0, 2.0, 5.0, 10)
@@ -172,10 +179,8 @@ get_fit <- function(hcrmode = c(
       opt <- nlminb(obj$par, obj$fn, obj$gr, upper = upper, lower = lower)
       ctr <- ctr + 1
     }
-    pdHess <- sdreport(obj)$pdHess
     objective <- -opt$objective
     convergence <- opt$convergence
-    pdHess <- ifelse(pdHess == TRUE, 0, 1)
   }
   dat <- dplyr::tibble(
     "Ut" = obj$report()$`ut`,
@@ -188,16 +193,15 @@ get_fit <- function(hcrmode = c(
     "hcr" = hcrmode,
     "obj" = ifelse(hcrmode != "dfo", objective, -obj$fn()),
     "convergence" = ifelse(hcrmode != "dfo", convergence, 0),
-    "pdHess" = ifelse(hcrmode != "dfo", pdHess, 0),
     "criterion" = objmode,
     "year" = 1:n_year
   )
-  list(dat, opt$par)
+  list(dat, opt$par, tmb_data)
 }
 
 #-------------------------------------------------------------------------------
 # leading parameters/values for simulation
-years <- 1:2000
+years <- 1:10000
 n_year <- length(years)
 ages <- 1:20
 cr <- 6
@@ -218,36 +222,69 @@ cv_u <- 1e-6
 usequota <- 1L
 dev <- 0.05
 umax <- 0.8
-
+modulus <- 200
+cr_sd <- 1
+ro_sd <- 0.25
 #-------------------------------------------------------------------------------
 # compile the cpp
 cppfile <- "src/om_hcr.cpp"
 compile(cppfile)
 dyn.load(TMB::dynlib("src/om_hcr"))
 
-
 ################################################################################
 # # testing
-# compile the cpp
 
-cppfile <- "src/om_hcr.cpp"
-compile(cppfile)
-dyn.load(TMB::dynlib("src/om_hcr"))
+obj <- "yield"
+set.seed(5)
+sd_survey <- 1e-4
+cv_u <- 1e-6
+modulus <- 200
+
+cr_sds <- seq(from = 1e-5, to = 1, length.out = 10)
+my_answers <- matrix(NA, nrow = length(cr_sds), ncol = 4)
+
+for(i in unique(cr_sds)){
+  sd_cr <- i
+  set.seed(5)
+  sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey, sd_cr, sd_ro = 0.25)
+  umax <- 0.5
+  usequota <- 1
+  opt <- get_fit(hcrmode = "linear", objmode = obj)
+  my_answers[which(cr_sds == i), 1:2] <- opt[[2]]
+  my_answers[which(cr_sds == i), 3] <- unique(opt[[1]]$convergence)
+  my_answers[which(cr_sds == i), 4] <- sd_cr
+}
 
 
-par(mfrow = c(2, 1))
+plot(my_answers[, 2] ~ my_answers[,4],
+     xlab = "sd cr", ylab = "bmin (blue) or cslope (red)",
+     col = "blue", pch = 16, type = "b", ylim = c(0, 2), main = obj
+)
+
+points(my_answers[, 1] ~ my_answers[, 4],
+       xlab = "sdo", ylab = "bmin",
+       col = "red", pch = 16, type = "b"
+)
+
+
+#############################################################
+# Other testing
+
+par(mfrow = c(1, 1))
 
 my_sds <- seq(from = 1e-3, to = 3, length.out = 15)
 my_answers <- matrix(NA, nrow = length(my_sds), ncol = 6)
-obj <- "utility"
+
+
 for (i in unique(my_sds)) {
   set.seed(5)
-  sd_survey <- i
+  sd_survey <- 0.1
   cv_u <- 1e-6
   sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey)
   # Rbig=1
   # pbig=0.999
   # sdr=0.8
+  umax <- 0.12
   usequota <- 1
   opt <- get_fit(hcrmode = "linear", objmode = obj)
   my_answers[which(my_sds == i), 1:2] <- opt[[2]]

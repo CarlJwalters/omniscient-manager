@@ -119,6 +119,9 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(umax);        // cap on implemented ut
   DATA_VECTOR(umult);       // implementation error ut
   DATA_SCALAR(dev);         // for smooth ut implementation
+  DATA_VECTOR(cr_samp);     // uncertainty in cr
+  DATA_VECTOR(ro_samp);     // uncertainty in ro 
+  
   
   vector<Type> n(n_age);
   vector<Type> ninit(n_age);
@@ -175,9 +178,14 @@ Type objective_function<Type>::operator()()
 
   n = ninit; 
   Type obj = 0;
-
+  int ireg = 0; 
   for(int t = 0; t < n_year; t++){
-    if(t%modulus==0){n = rinit*n;}
+    if(t%modulus==0){
+      n = rinit*n;
+      reca = cr_samp(ireg)/sbro;
+      recb = (cr_samp(ireg) - 1)/(ro_samp(ireg)*sbro);
+      ireg = ireg + 1;
+    }
     vulb(t) = (vul*n*wt).sum();  
     vbobs(t) = vulb(t)*vmult(t);  
     ssb(t) = (mwt*n).sum();                                          

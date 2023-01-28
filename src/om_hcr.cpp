@@ -99,9 +99,7 @@ Type objective_function<Type>::operator()()
   DATA_INTEGER(n_age);
   DATA_SCALAR(vbk);         // von bertalanffy k 
   DATA_SCALAR(s);           // avg survival
-  DATA_SCALAR(cr);          // compensation ratio
   DATA_SCALAR(rinit);       // initial number age 1 recruits
-  DATA_SCALAR(ro);          // average unfished recruitment
   DATA_SCALAR(uo);          // average historical exploitation rate
   DATA_SCALAR(asl);         // vul parameter 1
   DATA_SCALAR(ahv);         // vul parameter 2
@@ -119,8 +117,8 @@ Type objective_function<Type>::operator()()
   DATA_SCALAR(umax);        // cap on implemented ut
   DATA_VECTOR(umult);       // implementation error ut
   DATA_SCALAR(dev);         // for smooth ut implementation
-  DATA_VECTOR(cr_samp);     // uncertainty in cr
-  DATA_VECTOR(ro_samp);     // uncertainty in ro 
+  DATA_VECTOR(cr_samp);     // compensation ratio values
+  DATA_VECTOR(ro_samp);     // average unfished recruitment values
   
   
   vector<Type> n(n_age);
@@ -151,12 +149,12 @@ Type objective_function<Type>::operator()()
       Lf(a) = Lf(a - 1)*s*(1 - vul(a-1)*uo) / (1 - s*(1 - vul(a-1)*uo)); 
     }
   } 
-
+  int ireg = 0; 
   ninit = rinit*Lf; 
   mwt = mat*wt; 
   sbro = (Lo*mwt).sum(); 
-  Type reca = cr/sbro; 
-  Type recb = (cr - 1) / (ro*sbro); 
+  Type reca = cr_samp(ireg)/sbro; 
+  Type recb = (cr_samp(ireg) - 1) / (ro_samp(ireg)*sbro); 
 
   PARAMETER_VECTOR(par); 
   
@@ -178,13 +176,12 @@ Type objective_function<Type>::operator()()
 
   n = ninit; 
   Type obj = 0;
-  int ireg = 0; 
   for(int t = 0; t < n_year; t++){
     if(t%modulus==0){
       n = rinit*n;
+      ireg = ireg + 1;
       reca = cr_samp(ireg)/sbro;
       recb = (cr_samp(ireg) - 1)/(ro_samp(ireg)*sbro);
-      ireg = ireg + 1;
     }
     vulb(t) = (vul*n*wt).sum();  
     vbobs(t) = vulb(t)*vmult(t);  

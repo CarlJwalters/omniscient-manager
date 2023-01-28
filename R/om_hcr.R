@@ -34,8 +34,8 @@ get_devs <- function(pbig, Rbig, sdr, sd_survey,
   # generate deviates for quota management
   umult <- cv_u * rnorm(n_year)
   # cr, ro devs
-  cr_samp <- cr*exp(sd_cr*rnorm(n_year / modulus, 0, 1) - 0.5*sd_cr^2)
-  ro_samp <- ro*exp(sd_ro*rnorm(n_year / modulus, 0, 1) - -0.5*sd_ro^2)
+  cr_samp <- cr*exp(sd_cr*rnorm(n_year / modulus + 1, 0, 1) - 0.5*sd_cr^2)
+  ro_samp <- ro*exp(sd_ro*rnorm(n_year / modulus + 1, 0, 1) - -0.5*sd_ro^2)
   out <- tibble(
     year = 1:n_year,
     urand, Nrand, recmult, umult
@@ -245,6 +245,7 @@ my_answers <- matrix(NA, nrow = length(cr_sds), ncol = 4)
 
 for(i in unique(cr_sds)){
   sd_cr <- i
+  #sd_cr = 0.3
   set.seed(5)
   sim_dat <- get_devs(pbig, Rbig, sdr, sd_survey, sd_cr, sd_ro = 0.25)
   umax <- 0.5
